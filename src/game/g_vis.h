@@ -3,7 +3,7 @@
  */
 
 /*
-Copyright (C) 2002-2014 UFO: Alien Invasion.
+Copyright (C) 2002-2015 UFO: Alien Invasion.
 
 This program is free software; you can redistribute it and/or
 modify it under the terms of the GNU General Public License
@@ -64,7 +64,7 @@ typedef unsigned int vischeckflags_t;
 #define ACTOR_VIS_0		0.0
 
 bool G_FrustumVis(const Edict* from, const vec3_t point);
-float G_ActorVis(const vec3_t from, const Edict* ent, const Edict* check, bool full);
+float G_ActorVis(const Edict* ent, const Edict* check, bool full);
 void G_VisFlagsClear(int team);
 void G_VisFlagsAdd(Edict& ent, teammask_t teamMask);
 void G_VisFlagsSwap(Edict& ent, teammask_t teamMask);

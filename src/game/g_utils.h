@@ -4,7 +4,7 @@
  */
 
 /*
-All original material Copyright (C) 2002-2014 UFO: Alien Invasion.
+All original material Copyright (C) 2002-2015 UFO: Alien Invasion.
 
 Original file from Quake 2 v3.21: quake2-2.31/game/g_utils.c
 Copyright (C) 1997-2001 Id Software, Inc.
@@ -48,7 +48,7 @@ playermask_t G_GetClosePlayerMask(const vec3_t origin, float radius);
 void G_GenerateEntList(const char* entList[MAX_EDICTS]);
 void G_RecalcRouting(const char* model, const GridBox& box);
 void G_CompleteRecalcRouting(void);
-int G_TouchTriggers(Edict* ent);
+int G_TouchTriggers(Edict* ent, const entity_type_t type = ET_NULL);
 int G_TouchSolids(Edict* ent, float extend);
 void G_TouchEdicts(Edict* ent, float extend);
 uint32_t G_GetLevelFlagsFromPos(const pos3_t pos);

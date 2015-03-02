@@ -3,7 +3,7 @@
  */
 
 /*
-Copyright (C) 2002-2014 UFO: Alien Invasion.
+Copyright (C) 2002-2015 UFO: Alien Invasion.
 
 This program is free software; you can redistribute it and/or
 modify it under the terms of the GNU General Public License
@@ -30,10 +30,9 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 const equipDef_t* G_GetEquipDefByID (const char* equipID)
 {
-	int i;
-	const equipDef_t* ed;
+	const equipDef_t* ed = gi.csi->eds;
 
-	for (i = 0, ed = gi.csi->eds; i < gi.csi->numEDs; i++, ed++)
+	for (int i = 0;  i < gi.csi->numEDs; i++, ed++)
 		if (Q_streq(equipID, ed->id))
 			return ed;
 
@@ -140,7 +139,6 @@ static bool G_InventoryDropToFloorCheck (Edict* ent, containerIndex_t container)
  */
 bool G_AddItemToFloor (const pos3_t pos, const char* itemID)
 {
-	Edict* floor;
 	const objDef_t* od = INVSH_GetItemByIDSilent(itemID);
 	if (!od) {
 		gi.DPrintf("Could not find item '%s'\n", itemID);
@@ -148,7 +146,7 @@ bool G_AddItemToFloor (const pos3_t pos, const char* itemID)
 	}
 
 	/* Also sets FLOOR(ent) to correct value. */
-	floor = G_GetFloorItemFromPos(pos);
+	Edict* floor = G_GetFloorItemFromPos(pos);
 	/* nothing on the ground yet? */
 	if (!floor)
 		floor = G_SpawnFloor(pos);
@@ -165,11 +163,10 @@ bool G_AddItemToFloor (const pos3_t pos, const char* itemID)
 static bool G_InventoryPlaceItemAdjacent (Edict* ent)
 {
 	vec2_t oldPos; /* if we have to place it to adjacent  */
-	Edict* floorAdjacent;
 	int i;
 
 	Vector2Copy(ent->pos, oldPos);
-	floorAdjacent = nullptr;
+	Edict* floorAdjacent = nullptr;
 
 	for (i = 0; i < DIRECTIONS; i++) {
 		/** @todo Check whether movement is possible here - otherwise don't use this field */
@@ -247,8 +244,7 @@ void G_InventoryToFloor (Edict* ent)
 
 	/* drop items */
 	/* cycle through all containers */
-	containerIndex_t container;
-	for (container = 0; container < CID_MAX; container++) {
+	for (containerIndex_t container = 0; container < CID_MAX; container++) {
 		/* skip floor - we want to drop to floor */
 		if (container == CID_FLOOR)
 			continue;
@@ -272,6 +268,7 @@ void G_InventoryToFloor (Edict* ent)
 			if (!game.invi.removeFromInventory(&ent->chr.inv, INVDEF(container), ic))
 				gi.Error("Could not remove item '%s' from inventory %i of entity %i",
 						ic->def()->id, container, ent->getIdNum());
+			G_EventInventoryDelete(*ent, G_VisToPM(ent->visflags), container, ic->getX(), ic->getY());
 			if (game.invi.addToInventory(&floor->chr.inv, &item, INVDEF(CID_FLOOR), NONE, NONE, 1) == nullptr)
 				gi.Error("Could not add item '%s' from inventory %i of entity %i to floor container",
 						ic->def()->id, container, ent->getIdNum());
@@ -371,7 +368,7 @@ void G_SendInventory (playermask_t playerMask, const Edict& ent)
 	while ((cont = ent.chr.inv.getNextCont(cont, true))) {
 		if (!G_IsItem(&ent) && INVDEF(cont->id)->temp)
 			continue;
-		Item* item = nullptr;
+		const Item* item = nullptr;
 		while ((item = cont->getNextItem(item))) {
 			/* send a single item */
 			assert(item->def());

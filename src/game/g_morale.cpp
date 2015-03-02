@@ -3,7 +3,7 @@
  */
 
 /*
-Copyright (C) 2002-2014 UFO: Alien Invasion.
+Copyright (C) 2002-2015 UFO: Alien Invasion.
 
 This program is free software; you can redistribute it and/or
 modify it under the terms of the GNU General Public License
@@ -62,7 +62,7 @@ static void G_MoralePanic (Actor* actor)
 	G_EventCenterView(*actor);
 
 	/* move around a bit, try to avoid opponents */
-	AI_ActorThink(actor->getPlayer(), actor);
+	AI_ActorRun(actor->getPlayer(), actor);
 
 	/* kill TUs */
 	G_ActorSetTU(actor, 0);
@@ -107,7 +107,7 @@ static void G_MoraleRage (Actor* actor)
 	G_EventSendState(G_VisToPM(actor->visflags), *actor);
 	G_ClientStateChange(actor->getPlayer(), actor, ~STATE_REACTION, false);
 
-	AI_ActorThink(actor->getPlayer(), actor);
+	AI_ActorRun(actor->getPlayer(), actor);
 }
 
 /**
@@ -158,7 +158,7 @@ static bool G_IsMoraleEnabled (int team)
  */
 void G_MoraleBehaviour (int team)
 {
-	bool enabled = G_IsMoraleEnabled(team);
+	const bool enabled = G_IsMoraleEnabled(team);
 	if (!enabled)
 		return;
 
@@ -199,7 +199,7 @@ void G_MoraleBehaviour (int team)
 		G_ActorSetMaxs(actor);
 
 		/* morale-regeneration, capped at max: */
-		int newMorale = actor->morale + MORALE_RANDOM(mor_regeneration->value);
+		const int newMorale = actor->morale + MORALE_RANDOM(mor_regeneration->value);
 		const int maxMorale = GET_MORALE(actor->chr.score.skills[ABILITY_MIND]);
 		if (newMorale > maxMorale)
 			actor->morale = maxMorale;

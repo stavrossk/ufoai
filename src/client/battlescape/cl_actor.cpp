@@ -4,7 +4,7 @@
  */
 
 /*
-Copyright (C) 2002-2014 UFO: Alien Invasion.
+Copyright (C) 2002-2015 UFO: Alien Invasion.
 
 This program is free software; you can redistribute it and/or
 modify it under the terms of the GNU General Public License
@@ -408,10 +408,6 @@ void CL_ActorRemoveFromTeamList (le_t* le)
 				CL_ActorCleanup(le);
 				/* remove from list */
 				cl.teamList[i] = nullptr;
-			} else {
-				/** @todo why the heck is that needed? the inventory was already dropped to floor. */
-				le->left = le->right = le->headgear = NONE;
-				cls.i.destroyInventory(&le->inv);
 			}
 
 			/* disable hud button */
@@ -1673,6 +1669,10 @@ static void CL_TargetingStraight (const pos3_t fromPos, actorSizeEnum_t fromActo
 	/* calculate direction */
 	vec3_t dir;
 	VectorSubtract(end, start, dir);
+
+	/* Calculate shot origin */
+	selActor->fd->getShotOrigin(start, dir, LE_IsCrouched(selActor), start);
+	VectorSubtract(end, start, dir);
 	VectorNormalize(dir);
 
 	/* calculate 'out of range point' if there is one */
@@ -1748,7 +1748,6 @@ static void CL_TargetingGrenade (const pos3_t fromPos, actorSizeEnum_t fromActor
 	vec3_t from, at, cross;
 	Grid_PosToVec(cl.mapData->routing, fromActorSize, fromPos, from);
 	Grid_PosToVec(cl.mapData->routing, toActorSize, toPos, at);
-	from[2] += selActor->fd->shotOrg[1];
 
 	/* prefer to aim grenades at the ground */
 	at[2] -= GROUND_DELTA;
@@ -1756,8 +1755,13 @@ static void CL_TargetingGrenade (const pos3_t fromPos, actorSizeEnum_t fromActor
 		at[2] -= mousePosTargettingAlign;
 	VectorCopy(at, cross);
 
+	/* Calculate shot origin */
+	vec3_t ds;
+	VectorSubtract(at, from, ds);
+	selActor->fd->getShotOrigin(from, ds, LE_IsCrouched(selActor), from);
+
 	/* calculate parabola */
-	vec3_t v0, ds;
+	vec3_t v0;
 	float dt = Com_GrenadeTarget(from, at, selActor->fd->range, selActor->fd->launched, selActor->fd->rolled, v0);
 	if (!dt) {
 		CL_ParticleSpawn("cross_no", 0, cross);
@@ -2125,7 +2129,7 @@ void CL_AddActorPathing (void)
  */
 void CL_ActorPlaySound (const le_t* le, actorSound_t soundType)
 {
-	const char* actorSound = Com_GetActorSound(le->teamDef, le->gender, soundType);
+	const char* actorSound = le->teamDef->getActorSound(le->gender, soundType);
 	if (actorSound) {
 		if (S_LoadAndPlaySample(actorSound, le->origin, SOUND_ATTN_IDLE, SND_VOLUME_DEFAULT)) {
 			Com_DPrintf(DEBUG_SOUND|DEBUG_CLIENT, "CL_PlayActorSound: ActorSound: '%s'\n", actorSound);

@@ -3,7 +3,7 @@
  */
 
 /*
-Copyright (C) 2002-2014 UFO: Alien Invasion.
+Copyright (C) 2002-2015 UFO: Alien Invasion.
 
 This program is free software; you can redistribute it and/or
 modify it under the terms of the GNU General Public License
@@ -122,7 +122,7 @@ extern "C" int main (int argc, char** argv)
 
 	if (config.log) {
 		const char* path = "testall.log";
-		logFile = fopen(path, "wb");
+		logFile = Sys_Fopen(path, "wb");
 		Qcommon_SetPrintFunction(TEST_vPrintfLog);
 	} else if (config.verbose){
 		Qcommon_SetPrintFunction(TEST_vPrintf);

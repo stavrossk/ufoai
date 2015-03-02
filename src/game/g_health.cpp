@@ -3,7 +3,7 @@
  */
 
 /*
-Copyright (C) 2002-2014 UFO: Alien Invasion.
+Copyright (C) 2002-2015 UFO: Alien Invasion.
 
 This program is free software; you can redistribute it and/or
 modify it under the terms of the GNU General Public License
@@ -40,7 +40,7 @@ static byte G_GetImpactDirection(const Edict* const target, const vec3_t impact)
 	VectorCopy(dvecs[target->dir], vec2);
 	VectorNormalize(vec2);
 
-	return AngleToDir(VectorAngleBetween(vec1, vec2) / torad);
+	return AngleToDir(VectorAngleBetween(vec2, vec1) * todeg);
 }
 
 /**
@@ -55,17 +55,16 @@ void G_DamageActor (Edict* target, const int damage, const vec3_t impact)
 
 	G_TakeDamage(target, damage);
 	if (damage > 0 && target->HP > 0) {
-		short bodyPart;
 		const teamDef_t* const teamDef = target->chr.teamDef;
 		if (impact) {
 			/* Direct hit */
 			const byte impactDirection = G_GetImpactDirection(target, impact);
 			const float impactHeight = impact[2] / (target->absBox.mins[2] + target->absBox.maxs[2]);
-			bodyPart = teamDef->bodyTemplate->getHitBodyPart(impactDirection, impactHeight);
+			const int bodyPart = teamDef->bodyTemplate->getHitBodyPart(impactDirection, impactHeight);
 			target->chr.wounds.woundLevel[bodyPart] += damage;
 		} else {
 			/* No direct hit (splash damage) */
-			for (bodyPart = 0; bodyPart < teamDef->bodyTemplate->numBodyParts(); ++bodyPart)
+			for (int bodyPart = 0; bodyPart < teamDef->bodyTemplate->numBodyParts(); ++bodyPart)
 				target->chr.wounds.woundLevel[bodyPart] += teamDef->bodyTemplate->getArea(bodyPart) * damage;
 		}
 #if 0
@@ -141,7 +140,7 @@ void G_BleedWounds (const int team)
 		if (CHRSH_IsTeamDefRobot(actor->chr.teamDef))
 			continue;
 		const teamDef_t* const teamDef = actor->chr.teamDef;
-		woundInfo_t& wounds = actor->chr.wounds;
+		const woundInfo_t& wounds = actor->chr.wounds;
 		int damage = 0;
 		for (int bodyPart = 0; bodyPart < teamDef->bodyTemplate->numBodyParts(); ++bodyPart)
 			if (wounds.woundLevel[bodyPart] > actor->chr.maxHP * teamDef->bodyTemplate->woundThreshold(bodyPart))
@@ -216,13 +215,14 @@ float G_ActorGetInjuryPenalty (const Edict* const ent, const modifier_types_t ty
 	return penalty;
 }
 
-bool G_IsActorWounded (const Edict* ent)
+bool G_IsActorWounded (const Edict* ent, bool serious)
 {
 	if (ent == nullptr || !G_IsLivingActor(ent) || ent->chr.teamDef == nullptr)
 		return false;
-
-	for (int i = 0; i < ent->chr.teamDef->bodyTemplate->numBodyParts(); ++i)
-		if (ent->chr.wounds.woundLevel[i] > 0)
+	const character_t& chr = ent->chr;
+	const BodyData* bodyTmp = chr.teamDef->bodyTemplate;
+	for (int i = 0; i < bodyTmp->numBodyParts(); ++i)
+		if (chr.wounds.woundLevel[i] > serious ? chr.maxHP * bodyTmp->woundThreshold(i) : 0)
 			return true;
 
 	return false;

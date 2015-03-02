@@ -4,7 +4,7 @@
  */
 
 /*
-Copyright (C) 2002-2014 UFO: Alien Invasion.
+Copyright (C) 2002-2015 UFO: Alien Invasion.
 
 This program is free software; you can redistribute it and/or
 modify it under the terms of the GNU General Public License
@@ -132,20 +132,15 @@ static void GAME_SK_Restart_f (void)
  */
 static void GAME_SK_ChangeEquip_f (void)
 {
-	const char* cvarName;
-	const char* command;
-	changeEquipType_t type;
-	const equipDef_t* ed;
-	char cvarBuf[MAX_VAR];
-
 	if (cgi->Cmd_Argc() < 2) {
 		cgi->Com_Printf("Usage: %s <cvarname>\n", cgi->Cmd_Argv(0));
 		return;
 	}
 
-	command = cgi->Cmd_Argv(0);
-	cvarName = cgi->Cmd_Argv(1);
+	const char* command = cgi->Cmd_Argv(0);
+	const char* cvarName = cgi->Cmd_Argv(1);
 
+	changeEquipType_t type;
 	if (Q_streq(command, "sk_prevequip")) {
 		type = BACKWARD;
 	} else if (Q_streq(command, "sk_nextequip")) {
@@ -154,8 +149,9 @@ static void GAME_SK_ChangeEquip_f (void)
 		type = INIT;
 	}
 
-	ed = cgi->GAME_ChangeEquip(cgi->cgameType->equipmentList, type, cgi->Cvar_GetString(cvarName));
+	const equipDef_t* ed = cgi->GAME_ChangeEquip(cgi->cgameType->equipmentList, type, cgi->Cvar_GetString(cvarName));
 
+	char cvarBuf[MAX_VAR];
 	Com_sprintf(cvarBuf, sizeof(cvarBuf), "%sname", cvarName);
 
 	cgi->Cvar_Set(cvarName, "%s", ed->id);
@@ -176,18 +172,11 @@ static void GAME_SK_ChangeEquip_f (void)
  */
 static void GAME_SK_Results (dbuffer* msg, int winner, int* numSpawned, int* numAlive, int numKilled[][MAX_TEAMS], int numStunned[][MAX_TEAMS], bool nextmap)
 {
-	char resultText[1024];
-	int enemiesKilled, enemiesStunned;
-	const int team = cgi->GAME_GetCurrentTeam();
-	const int ownFriendlyFire = numKilled[team][team] + numKilled[TEAM_CIVILIAN][team];
-	const int ownLost = numSpawned[team] - numAlive[team] - ownFriendlyFire;
-	const int civFriendlyFire = numKilled[team][TEAM_CIVILIAN] + numKilled[TEAM_CIVILIAN][TEAM_CIVILIAN];
-	const int civLost = numSpawned[TEAM_CIVILIAN] - numAlive[TEAM_CIVILIAN] - civFriendlyFire;
-
 	if (nextmap)
 		return;
 
-	cgi->CL_Drop();
+	/* HACK: Change to the main menu now so cgame shutdown won't kill the results popup doing it */
+	cgi->UI_InitStack("main", "");
 
 	if (winner == -1) {
 		cgi->UI_Popup(_("Game Drawn!"), "%s\n", _("The game was a draw!\n\nEnemies escaped."));
@@ -199,12 +188,19 @@ static void GAME_SK_Results (dbuffer* msg, int winner, int* numSpawned, int* num
 		return;
 	}
 
-	enemiesStunned = 0;
+	const int team = cgi->GAME_GetCurrentTeam();
+	const int ownFriendlyFire = numKilled[team][team] + numKilled[TEAM_CIVILIAN][team];
+	const int ownLost = numSpawned[team] - numAlive[team] - ownFriendlyFire;
+	const int civFriendlyFire = numKilled[team][TEAM_CIVILIAN] + numKilled[TEAM_CIVILIAN][TEAM_CIVILIAN];
+	const int civLost = numSpawned[TEAM_CIVILIAN] - numAlive[TEAM_CIVILIAN] - civFriendlyFire;
+
+	int enemiesStunned = 0;
 	for (int i = 0; i <= MAX_TEAMS; ++i) {
 			enemiesStunned += numStunned[i][TEAM_ALIEN];
 	}
-	enemiesKilled = numSpawned[TEAM_ALIEN] - numAlive[TEAM_ALIEN] - enemiesStunned;
+	const int enemiesKilled = numSpawned[TEAM_ALIEN] - numAlive[TEAM_ALIEN] - enemiesStunned;
 
+	char resultText[1024];
 	Com_sprintf(resultText, sizeof(resultText),
 			_("\n%i of %i enemies killed, %i stunned, %i survived.\n"
 			  "%i of %i team members survived, %i lost in action, %i friendly fire loses.\n"
@@ -217,6 +213,9 @@ static void GAME_SK_Results (dbuffer* msg, int winner, int* numSpawned, int* num
 	} else {
 		cgi->UI_Popup(_("Better luck next time"), "%s\n%s\n", _("You've lost the game!"), resultText);
 	}
+
+	/* Ask the game mode to shutdown -- don't execute the shutdown here or we will crash! */
+	cgi->Cbuf_AddText("game_exit");
 }
 
 /**
@@ -264,7 +263,6 @@ static inline void GAME_SK_HideUFOs (const linkedList_t* ufos)
 
 static const mapDef_t* GAME_SK_MapInfo (int step)
 {
-	const mapDef_t* md;
 	int i = 0;
 
 	while (!cgi->GAME_GetCurrentSelectedMap()->singleplayer) {
@@ -274,7 +272,7 @@ static const mapDef_t* GAME_SK_MapInfo (int step)
 			cgi->Com_Error(ERR_DROP, "no singleplayer map found");
 	}
 
-	md = cgi->GAME_GetCurrentSelectedMap();
+	const mapDef_t* md = cgi->GAME_GetCurrentSelectedMap();
 
 	cgi->Cvar_SetValue("ai_singleplayeraliens", md->maxAliens);
 
@@ -294,21 +292,20 @@ static const mapDef_t* GAME_SK_MapInfo (int step)
 
 static void GAME_InitMenuOptions (void)
 {
-	int i;
 	uiNode_t* ufoOptions = nullptr;
 	uiNode_t* aircraftOptions = nullptr;
 
-	for (i = 0; i < UFO_MAX; i++) {
+	for (int i = 0; i < UFO_MAX; i++) {
 		const char* shortName = cgi->Com_UFOTypeToShortName((ufoType_t)i);
 		cgi->UI_AddOption(&ufoOptions, shortName, shortName, GAME_SK_GetRandomMapAssemblyNameForCraft(shortName));
 	}
-	for (i = 0; i < UFO_MAX; i++) {
+	for (int i = 0; i < UFO_MAX; i++) {
 		const char* shortName = cgi->Com_UFOCrashedTypeToShortName((ufoType_t)i);
 		cgi->UI_AddOption(&ufoOptions, shortName, shortName, GAME_SK_GetRandomMapAssemblyNameForCraft(shortName));
 	}
 	cgi->UI_RegisterOption(OPTION_UFOS, ufoOptions);
 
-	for (i = 0; i < DROPSHIP_MAX; i++) {
+	for (int i = 0; i < DROPSHIP_MAX; i++) {
 		const char* shortName = cgi->Com_DropShipTypeToShortName((humanAircraftType_t)i);
 		cgi->UI_AddOption(&aircraftOptions, shortName, shortName, GAME_SK_GetRandomMapAssemblyNameForCraft(shortName));
 	}
@@ -336,6 +333,8 @@ static void GAME_SK_InitStartup (void)
 static void GAME_SK_Shutdown (void)
 {
 	cgi->Cmd_TableRemoveList(skirmishCmds);
+	/* You really don't want this with campaign */
+	cgi->Cvar_ForceSet("g_endlessaliens", "0");
 
 	cgi->UI_ResetData(OPTION_DROPSHIPS);
 	cgi->UI_ResetData(OPTION_UFOS);

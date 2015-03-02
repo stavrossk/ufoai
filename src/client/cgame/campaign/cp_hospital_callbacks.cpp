@@ -3,7 +3,7 @@
  */
 
 /*
-Copyright (C) 2002-2014 UFO: Alien Invasion.
+Copyright (C) 2002-2015 UFO: Alien Invasion.
 
 This program is free software; you can redistribute it and/or
 modify it under the terms of the GNU General Public License
@@ -46,16 +46,6 @@ static void HOS_EntryWoundData (const character_t& chr)
 	}
 }
 
-static float HOS_GetInjuryLevel (const character_t* const chr)
-{
-	float injuryLevel = 0.0f;
-
-	for (int i = 0; i < chr->teamDef->bodyTemplate->numBodyParts(); ++i)
-		injuryLevel += static_cast<float>(chr->wounds.treatmentLevel[i]) / chr->maxHP;
-
-	return injuryLevel;
-}
-
 static const char* HOS_GetRank (const Employee& employee)
 {
 	/* Print rank for soldiers or type for other employees. */
@@ -69,29 +59,33 @@ static const char* HOS_GetRank (const Employee& employee)
 static const char* HOS_GetInjuryLevelString (const Employee& employee, float injuryLevel)
 {
 	/* If the employee is seriously wounded (HP <= 50% maxHP), make him red. */
-	if (employee.chr.HP <= (int) (employee.chr.maxHP * 0.5) || injuryLevel >= 0.5)
+	if (employee.chr.HP <= (int) (employee.chr.maxHP * 0.5) || injuryLevel > 0.5f)
 		return "serious";
 
 	/* If the employee is semi-seriously wounded (HP <= 85% maxHP), make him yellow. */
-	else if (employee.chr.HP <= (int) (employee.chr.maxHP * 0.85) || injuryLevel >= 0.15)
+	else if (employee.chr.HP <= (int) (employee.chr.maxHP * 0.85) || injuryLevel > 0.15f)
 		return "medium";
 
 	/* no wounds and full hp */
-	else if (employee.chr.HP >= employee.chr.maxHP && injuryLevel <= 0)
-		return "healty";
+	else if (employee.chr.HP >= employee.chr.maxHP && injuryLevel < 0.0001f)
+		return "healthy";
 
 	return "light";
 }
 
-static inline void HOS_Entry (const Employee& employee, float injuryLevel)
+static inline void HOS_Entry (const Employee& employee)
 {
+	const character_t& chr = employee.chr;
+	const float injuryLevel = HOS_GetInjuryLevel(chr);
+	if (!employee.isSoldier() && chr.HP >= chr.maxHP && injuryLevel <= 0.0f)
+		return;
+
 	const char* rank = HOS_GetRank(employee);
 	const char* level = HOS_GetInjuryLevelString(employee, injuryLevel);
-	const character_t& chr = employee.chr;
+	const aircraft_t* craft = AIR_IsEmployeeInAircraft(&employee, nullptr);
 
-	if (!employee.isSoldier() && employee.chr.HP >= employee.chr.maxHP && injuryLevel <= 0)
-		return;
-	cgi->UI_ExecuteConfunc("hospitaladd %i \"%s\" %i %i \"%s\" \"%s\"", chr.ucn, level, chr.HP, chr.maxHP, chr.name, rank);
+	cgi->UI_ExecuteConfunc("hospitaladd %i \"%s\" %i %i \"%s\" \"%s\" \"%s\"",
+			chr.ucn, level, chr.HP, chr.maxHP, chr.name, rank, craft ? craft->name : "");
 	HOS_EntryWoundData(chr);
 }
 
@@ -128,8 +122,7 @@ static void HOS_Init_f (void)
 			/* Don't show soldiers who are not in this base or gone in mission */
 			if (!employee->isHiredInBase(base) || employee->isAwayFromBase())
 				continue;
-			const float injuryLevel = HOS_GetInjuryLevel(&employee->chr);
-			HOS_Entry(*employee, injuryLevel);
+			HOS_Entry(*employee);
 			if (containerSet)
 				continue;
 			CP_SetEquipContainer(&employee->chr);

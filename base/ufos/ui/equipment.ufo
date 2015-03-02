@@ -15,13 +15,24 @@ component equipSoldier extends panel {
 	}
 
 	string name {
-		pos				"0 0"
+		pos				"30 0"
 		color			"0.56 0.81 0.76 1"
 		size			"285 25"
 		contentalign	ALIGN_CL
 		onClick {
 			cmd "equipment_soldierlist_select <node:parent.id@integer>;"
 		}
+	}
+
+	data status {
+		integer		0
+	}
+
+	image assigned {
+		pos		"0 0"
+		size	"24 24"
+		src		"icons/icon_aircraftsml"
+		invis	true
 	}
 }
 
@@ -84,10 +95,21 @@ window equipment extends objectinfo
 				confunc equipment_soldierlist_clear {
 					call *node:parent.soldierlist@removeAllChild
 				}
+				// <1> Soldier UCN
+				// <2> Soldier name
+				// <3> Is soldier wounded?
 				confunc equipment_soldierlist_add {
 					call *node:parent.soldierlist@createChild("member<1>", "equipSoldier")
 					*node:parent.soldierlist.member<1>.id@integer = <1>
 					*node:parent.soldierlist.member<1>.name@string = <2>
+					*node:parent.soldierlist.member<1>.status@integer = <3>
+					if ( <3> == 1 ) {
+						*node:parent.soldierlist.member<1>.name@color = "1 0.81 0.76 1"
+					}
+					if ( <4> ne "" ) {
+						*node:parent.soldierlist.member<1>.assigned@invis = false
+						*node:parent.soldierlist.member<1>.assigned@tooltip = <4>
+					}
 
 					if ( *node:root.selected@integer < 0 ) {
 						cmd "equipment_soldierlist_select <1>;"
@@ -96,7 +118,11 @@ window equipment extends objectinfo
 				}
 				confunc equipment_soldierlist_select {
 					if ( *node:root.selected@integer >= 0 ) {
-						*node:parent.soldierlist.member<node:root.selected@integer>.name@color = "0.56 0.81 0.76 1"
+						if ( *node:parent.soldierlist.member<node:root.selected@integer>.status@integer == 0 ) {
+							*node:parent.soldierlist.member<node:root.selected@integer>.name@color = "0.56 0.81 0.76 1"
+						} else {
+							*node:parent.soldierlist.member<node:root.selected@integer>.name@color = "1 0.81 0.76 1"
+						}
 					}
 					*node:root.selected@integer = <1>
 					*cvar:mn_ucn = <1>
@@ -134,7 +160,7 @@ window equipment extends objectinfo
 					color		"0.56 0.81 0.76 1"
 					onChange	{
 						cmd "employee_changename;"
-						cmd "ui_team_fillequip;"
+						cmd "ui_team_fillequip <node:root.param@string>;"
 						cmd "update_item_list;"
 						cmd "equipment_soldierlist_select <node:root.selected@integer>;"
 					}
@@ -322,7 +348,8 @@ window equipment extends objectinfo
 	data selected {
 	}
 
-
+	data param {
+	}
 	// ==================
 	// category buttons
 	// ==================
@@ -462,10 +489,12 @@ window equipment extends objectinfo
 		*cvar:mn_linkname = ""
 		*cvar:mn_itemname = ""
 		*node:root.selected@integer = -1
+		*node:root.param@string = ""
 
 		cmd "team_initskin;"
 		if ( paramCount > 0 ) {
 			cmd "ui_team_fillequip <1>;"
+			*node:root.param@string = <1>
 		} else {
 			cmd "ui_team_fillequip;"
 		}

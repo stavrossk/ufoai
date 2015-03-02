@@ -3,7 +3,7 @@
  */
 
 /*
-Copyright (C) 2002-2014 UFO: Alien Invasion.
+Copyright (C) 2002-2015 UFO: Alien Invasion.
 
 This program is free software; you can redistribute it and/or
 modify it under the terms of the GNU General Public License
@@ -31,7 +31,10 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
 int CL_ExplodeTime (const struct eventRegister_s* self, dbuffer* msg, eventTiming_t* eventTiming)
 {
-	return eventTiming->impactTime;
+	if (eventTiming->impactTime > cl.time)
+		return eventTiming->impactTime;
+
+	return eventTiming->nextTime;
 }
 
 /**

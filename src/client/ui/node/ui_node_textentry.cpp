@@ -10,7 +10,7 @@
  */
 
 /*
-Copyright (C) 2002-2014 UFO: Alien Invasion.
+Copyright (C) 2002-2015 UFO: Alien Invasion.
 
 This program is free software; you can redistribute it and/or
 modify it under the terms of the GNU General Public License
@@ -112,6 +112,18 @@ static void UI_TextEntryNodeFocus (uiNode_t* node, const uiCallContext_t* contex
 	/* remove the focus to show changes */
 	if (!UI_HasFocus(node)) {
 		UI_RequestFocus(node);
+	}
+}
+
+/**
+ * @brief force exit the edit mode of a textentry node
+ * @note the textentry must be on the active window
+ */
+static void UI_TextEntryNodeUnFocus (uiNode_t* node, const uiCallContext_t* context)
+{
+	/* remove the focus to show changes */
+	if (UI_HasFocus(node)) {
+		UI_RemoveFocus();
 	}
 }
 
@@ -384,4 +396,6 @@ void UI_RegisterTextEntryNode (uiBehaviour_t* behaviour)
 	UI_RegisterNodeMethod(behaviour, "edit", UI_TextEntryNodeFocus);
 	/* Sprite used to display the background */
 	UI_RegisterExtradataNodeProperty(behaviour, "background", V_UI_SPRITEREF, EXTRADATA_TYPE, background);
+	/* Call it to force exit of node edition */
+	UI_RegisterNodeMethod(behaviour, "exit", UI_TextEntryNodeUnFocus);
 }

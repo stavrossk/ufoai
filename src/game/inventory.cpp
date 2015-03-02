@@ -3,7 +3,7 @@
  */
 
 /*
-Copyright (C) 2002-2014 UFO: Alien Invasion.
+Copyright (C) 2002-2015 UFO: Alien Invasion.
 
 This program is free software; you can redistribute it and/or
 modify it under the terms of the GNU General Public License
@@ -238,12 +238,6 @@ bool InventoryInterface::removeFromInventory (Inventory* const inv, const invDef
  */
 inventory_action_t InventoryInterface::moveInInventory (Inventory* const inv, const invDef_t* from, Item* fItem, const invDef_t* to, int tx, int ty, int* TU, Item**  uponItem)
 {
-	Item* ic;
-
-	int time;
-	int checkedTo = INV_DOES_NOT_FIT;
-	bool alreadyRemovedSource = false;
-
 	assert(to);
 	assert(from);
 
@@ -253,7 +247,7 @@ inventory_action_t InventoryInterface::moveInInventory (Inventory* const inv, co
 	if (from == to && fItem->getX() == tx && fItem->getY() == ty)
 		return IA_NONE;
 
-	time = from->out + to->in;
+	int time = from->out + to->in;
 	if (from == to) {
 		if (from->isFloorDef())
 			time = 0;
@@ -266,6 +260,7 @@ inventory_action_t InventoryInterface::moveInInventory (Inventory* const inv, co
 
 	assert(inv);
 
+	int checkedTo = INV_DOES_NOT_FIT;
 	/* Special case for moving an item within the same container. */
 	if (from == to) {
 		/* Do nothing if we move inside a scroll container. */
@@ -319,9 +314,9 @@ inventory_action_t InventoryInterface::moveInInventory (Inventory* const inv, co
 		checkedTo = inv->canHoldItem(to, fItem->def(), tx, ty, fItem);
 	}
 
+	Item* ic;
+	bool alreadyRemovedSource = false;
 	if (to->armour && from != to && !checkedTo) {
-		Item cacheItem2;
-		Item* icTo;
 		/* Store x/y origin coordinates of removed (source) item.
 		 * When we re-add it we can use this. */
 		const int cacheFromX = fItem->getX();
@@ -329,7 +324,7 @@ inventory_action_t InventoryInterface::moveInInventory (Inventory* const inv, co
 
 		/* Check if destination/blocking item is the same as source/from item.
 		 * In that case the move is not needed -> abort. */
-		icTo = inv->getItemAtPos(to, tx, ty);
+		Item* icTo = inv->getItemAtPos(to, tx, ty);
 		if (fItem->def() == icTo->def())
 			return IA_NONE;
 
@@ -340,7 +335,7 @@ inventory_action_t InventoryInterface::moveInInventory (Inventory* const inv, co
 			/* Removal successful - store this info. */
 			alreadyRemovedSource = true;
 
-		cacheItem2 = this->cacheItem; /* Save/cache (source) item. The cacheItem is modified in MoveInInventory. */
+		Item cacheItem2 = this->cacheItem; /* Save/cache (source) item. The cacheItem is modified in MoveInInventory. */
 
 		/* Move the destination item to the source. */
 		moveInInventory(inv, to, icTo, from, cacheFromX, cacheFromY, TU, uponItem);
@@ -544,20 +539,17 @@ void InventoryInterface::destroyInventory (Inventory* const inv)
  */
 float InventoryInterface::GetInventoryState (const Inventory* inventory, int& slowestFd)
 {
-	float weight = 0;
-
 	slowestFd = 0;
 	const Container* cont = nullptr;
 	while ((cont = inventory->getNextCont(cont))) {
 		for (Item* ic = cont->_invList, *next; ic; ic = next) {
 			next = ic->getNext();
-			weight += ic->getWeight();
 			const fireDef_t* fireDef = ic->getSlowestFireDef();
 			if (slowestFd == 0 || (fireDef && fireDef->time > slowestFd))
 					slowestFd = fireDef->time;
 		}
 	}
-	return weight;
+	return inventory->getWeight();
 }
 
 #define WEAPONLESS_BONUS	0.4		/* if you got neither primary nor secondary weapon, this is the chance to retry to get one (before trying to get grenades or blades) */
@@ -573,21 +565,9 @@ float InventoryInterface::GetInventoryState (const Inventory* inventory, int& sl
  */
 int InventoryInterface::PackAmmoAndWeapon (character_t* const chr, const objDef_t* weapon, int missedPrimary, const equipDef_t* ed, int maxWeight)
 {
-	Inventory* const inv = &chr->inv;
-	const int speed = chr->score.skills[ABILITY_SPEED];
-	const objDef_t* ammo = nullptr;
-	bool allowLeft;
-	bool packed;
-	int ammoMult = 1;
-	int tuNeed = 0;
-	int maxTU;
-	float weight;
-
 	assert(!weapon->isArmour());
 	Item item(weapon);
-
-	/* are we going to allow trying the left hand */
-	allowLeft = !(inv->getContainer2(CID_RIGHT) && inv->getContainer2(CID_RIGHT)->def()->fireTwoHanded);
+	const objDef_t* ammo = nullptr;
 
 	if (weapon->oneshot) {
 		/* The weapon provides its own ammo (i.e. it is charged or loaded in the base.) */
@@ -601,8 +581,7 @@ int InventoryInterface::PackAmmoAndWeapon (character_t* const chr, const objDef_
 		/* find some suitable ammo for the weapon (we will have at least one if there are ammos for this
 		 * weapon in equipment definition) */
 		int totalAvailableAmmo = 0;
-		int i;
-		for (i = 0; i < csi->numODs; i++) {
+		for (int i = 0; i < csi->numODs; i++) {
 			const objDef_t* obj = INVSH_GetItemByIDX(i);
 			if (ed->numItems[i] && obj->isLoadableInWeapon(weapon)) {
 				totalAvailableAmmo++;
@@ -610,7 +589,7 @@ int InventoryInterface::PackAmmoAndWeapon (character_t* const chr, const objDef_
 		}
 		if (totalAvailableAmmo) {
 			int randNumber = rand() % totalAvailableAmmo;
-			for (i = 0; i < csi->numODs; i++) {
+			for (int i = 0; i < csi->numODs; i++) {
 				const objDef_t* obj = INVSH_GetItemByIDX(i);
 				if (ed->numItems[i] && obj->isLoadableInWeapon(weapon)) {
 					randNumber--;
@@ -638,16 +617,22 @@ int InventoryInterface::PackAmmoAndWeapon (character_t* const chr, const objDef_
 		return 0;
 	}
 
-	weight = GetInventoryState(inv, tuNeed) + item.getWeight();
-	maxTU = GET_TU(speed, GET_ENCUMBRANCE_PENALTY(weight, chr->score.skills[ABILITY_POWER]));
-	if (weight > maxWeight || tuNeed > maxTU) {
+	Inventory* const inv = &chr->inv;
+	const int speed = chr->score.skills[ABILITY_SPEED];
+	int tuNeed = 0;
+	float weight = GetInventoryState(inv, tuNeed) + item.getWeight();
+	int maxTU = GET_TU(speed, GET_ENCUMBRANCE_PENALTY(weight, chr->score.skills[ABILITY_POWER]));
+	if (weight > maxWeight * WEIGHT_FACTOR || tuNeed > maxTU) {
 		Com_DPrintf(DEBUG_SHARED, "PackAmmoAndWeapon: weapon too heavy: '%s' in equipment '%s' (%s).\n",
 				weapon->id, ed->id, invName);
 		return 0;
 	}
 
+	/* are we going to allow trying the left hand? */
+	const bool allowLeft = !(inv->getContainer2(CID_RIGHT) && inv->getContainer2(CID_RIGHT)->def()->fireTwoHanded);
+	int ammoMult = 1;
 	/* now try to pack the weapon */
-	packed = tryAddToInventory(inv, &item, &csi->ids[CID_RIGHT]);
+	bool packed = tryAddToInventory(inv, &item, &csi->ids[CID_RIGHT]);
 	if (packed)
 		ammoMult = 3;
 	if (!packed && allowLeft)
@@ -663,11 +648,10 @@ int InventoryInterface::PackAmmoAndWeapon (character_t* const chr, const objDef_
 
 	/* pack some more ammo in the backpack */
 	if (ammo) {
-		int num;
 		int numpacked = 0;
 
 		/* how many clips? */
-		num = (1 + ed->numItems[ammo->idx])
+		int num = (1 + ed->numItems[ammo->idx])
 			* (float) (1.0f + missedPrimary / 100.0);
 
 		/* pack some ammo */
@@ -677,7 +661,7 @@ int InventoryInterface::PackAmmoAndWeapon (character_t* const chr, const objDef_
 
 			Item mun(ammo);
 			/* ammo to backpack; belt is for knives and grenades */
-			if (weight <= maxWeight && tuNeed <= maxTU)
+			if (weight <= maxWeight * WEIGHT_FACTOR && tuNeed <= maxTU)
 					numpacked += tryAddToInventory(inv, &mun, &csi->ids[CID_BACKPACK]);
 			/* no problem if no space left; one ammo already loaded */
 			if (numpacked > ammoMult || numpacked * weapon->ammo > 11)
@@ -754,26 +738,20 @@ typedef enum {
  * Beware: If two weapons in the same category have the same price,
  * only one will be considered for inventory.
  */
-void InventoryInterface::EquipActor (character_t* const chr, const equipDef_t* ed, int maxWeight)
+void InventoryInterface::EquipActorNormal (character_t* const chr, const equipDef_t* ed, int maxWeight)
 {
-	Inventory* const inv = &chr->inv;
 	const teamDef_t* td = chr->teamDef;
-	const int speed = chr->score.skills[ABILITY_SPEED];
-	int i;
 	const int numEquip = lengthof(ed->numItems);
 	int repeat = 0;
 
 	if (td->weapons) {
-		equipPrimaryWeaponType_t primary = WEAPON_NO_PRIMARY;
-		int sum;
 		int missedPrimary = 0; /**< If actor has a primary weapon, this is zero. Otherwise, this is the probability * 100
 								* that the actor had to get a primary weapon (used to compensate the lack of primary weapon) */
 		const objDef_t* primaryWeapon = nullptr;
-		int hasWeapon = 0;
 		/* Primary weapons */
 		const int maxWeaponIdx = std::min(this->csi->numODs - 1, numEquip - 1);
 		int randNumber = rand() % 100;
-		for (i = 0; i < maxWeaponIdx; i++) {
+		for (int i = 0; i < maxWeaponIdx; i++) {
 			const objDef_t* obj = INVSH_GetItemByIDX(i);
 			if (ed->numItems[i] && obj->weapon && obj->fireTwoHanded && obj->isPrimary) {
 				randNumber -= ed->numItems[i];
@@ -783,6 +761,8 @@ void InventoryInterface::EquipActor (character_t* const chr, const equipDef_t* e
 			}
 		}
 		/* See if a weapon has been selected. */
+		equipPrimaryWeaponType_t primary = WEAPON_NO_PRIMARY;
+		int hasWeapon = 0;
 		if (primaryWeapon) {
 			hasWeapon += PackAmmoAndWeapon(chr, primaryWeapon, 0, ed, maxWeight);
 			if (hasWeapon) {
@@ -815,7 +795,7 @@ void InventoryInterface::EquipActor (character_t* const chr, const equipDef_t* e
 		do {
 			int randNumber = rand() % 100;
 			const objDef_t* secondaryWeapon = nullptr;
-			for (i = 0; i < this->csi->numODs; i++) {
+			for (int i = 0; i < this->csi->numODs; i++) {
 				const objDef_t* obj = INVSH_GetItemByIDX(i);
 				if (ed->numItems[i] && obj->weapon && obj->isReloadable() && !obj->deplete && obj->isSecondary) {
 					randNumber -= ed->numItems[i] / (primary == WEAPON_PARTICLE_OR_NORMAL ? 2 : 1);
@@ -838,8 +818,8 @@ void InventoryInterface::EquipActor (character_t* const chr, const equipDef_t* e
 			repeat = 0;
 		/* Misc object probability can be bigger than 100 -- you're sure to
 		 * have one misc if it fits your backpack */
-		sum = 0;
-		for (i = 0; i < this->csi->numODs; i++) {
+		int sum = 0;
+		for (int i = 0; i < this->csi->numODs; i++) {
 			const objDef_t* obj = INVSH_GetItemByIDX(i);
 			if (ed->numItems[i] && ((obj->weapon && obj->isSecondary
 			 && (!obj->isReloadable() || obj->deplete)) || obj->isMisc)) {
@@ -853,7 +833,7 @@ void InventoryInterface::EquipActor (character_t* const chr, const equipDef_t* e
 			do {
 				int randNumber = rand() % sum;
 				const objDef_t* secondaryWeapon = nullptr;
-				for (i = 0; i < this->csi->numODs; i++) {
+				for (int i = 0; i < this->csi->numODs; i++) {
 					const objDef_t* obj = INVSH_GetItemByIDX(i);
 					if (ed->numItems[i] && ((obj->weapon && obj->isSecondary
 					 && (!obj->isReloadable() || obj->deplete)) || obj->isMisc)) {
@@ -880,7 +860,7 @@ void InventoryInterface::EquipActor (character_t* const chr, const equipDef_t* e
 			const objDef_t* blade = nullptr;
 			Com_DPrintf(DEBUG_SHARED, "INVSH_EquipActor: no weapon picked in equipment '%s', defaulting to the most expensive secondary weapon without reload. (%s)\n",
 					ed->id, invName);
-			for (i = 0; i < this->csi->numODs; i++) {
+			for (int i = 0; i < this->csi->numODs; i++) {
 				const objDef_t* obj = INVSH_GetItemByIDX(i);
 				if (ed->numItems[i] && obj->weapon && obj->isSecondary && !obj->isReloadable()) {
 					if (obj->price > maxPrice) {
@@ -903,19 +883,21 @@ void InventoryInterface::EquipActor (character_t* const chr, const equipDef_t* e
 		return;
 	}
 
+	Inventory* const inv = &chr->inv;
+	const int speed = chr->score.skills[ABILITY_SPEED];
 	if (td->armour) {
 		do {
 			int randNumber = rand() % 100;
-			for (i = 0; i < this->csi->numODs; i++) {
+			for (int i = 0; i < this->csi->numODs; i++) {
 				const objDef_t* armour = INVSH_GetItemByIDX(i);
 				if (ed->numItems[i] && armour->isArmour()) {
 					randNumber -= ed->numItems[i];
 					if (randNumber < 0) {
 						const Item item(armour);
 						int tuNeed = 0;
-						const float weight = GetInventoryState(inv, tuNeed) + item.getWeight();
+						const int weight = GetInventoryState(inv, tuNeed) + item.getWeight();
 						const int maxTU = GET_TU(speed, GET_ENCUMBRANCE_PENALTY(weight, chr->score.skills[ABILITY_POWER]));
-						if (weight > maxWeight || tuNeed > maxTU)
+						if (weight > maxWeight * WEIGHT_FACTOR || tuNeed > maxTU)
 							continue;
 						if (tryAddToInventory(inv, &item, &this->csi->ids[CID_ARMOUR])) {
 							repeat = 0;
@@ -932,7 +914,7 @@ void InventoryInterface::EquipActor (character_t* const chr, const equipDef_t* e
 
 	{
 		int randNumber = rand() % 10;
-		for (i = 0; i < this->csi->numODs; i++) {
+		for (int i = 0; i < this->csi->numODs; i++) {
 			if (ed->numItems[i]) {
 				const objDef_t* miscItem = INVSH_GetItemByIDX(i);
 				if (miscItem->isMisc && !miscItem->weapon) {
@@ -952,7 +934,7 @@ void InventoryInterface::EquipActor (character_t* const chr, const equipDef_t* e
 							container = CID_IMPLANT;
 						else
 							container = CID_BACKPACK;
-						if (weight > maxWeight || tuNeed > maxTU || (itemFd && itemFd->time > maxTU))
+						if (weight > maxWeight * WEIGHT_FACTOR || tuNeed > maxTU || (itemFd && itemFd->time > maxTU))
 							continue;
 						tryAddToInventory(inv, &item, &this->csi->ids[container]);
 					}
@@ -962,6 +944,21 @@ void InventoryInterface::EquipActor (character_t* const chr, const equipDef_t* e
 	}
 }
 
+void InventoryInterface::EquipActor (character_t* const chr, const equipDef_t* ed, const objDef_t* weapon, int maxWeight)
+{
+	if (chr->teamDef->robot && weapon) {
+		if (weapon->numAmmos > 0)
+			EquipActorRobot(&chr->inv, weapon);
+		else if (weapon->fireTwoHanded)
+			EquipActorMelee(&chr->inv, chr->teamDef);
+		else
+			Com_Printf("EquipActor: weapon %s has no ammo assigned and must not be fired two handed\n", weapon->id);
+	} else if (chr->teamDef->weapons && ed) {
+		EquipActorNormal(chr, ed, maxWeight);
+	} else {
+		Com_Printf("EquipActor: actor with no equipment\n");
+	}
+}
 /**
  * @brief Calculate the number of used inventory slots
  * @return The number of free inventory slots

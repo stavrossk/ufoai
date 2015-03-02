@@ -20,7 +20,7 @@ item assault
 	price			1000
 	size			20
 	is_primary		true
-	weight			2.8
+	weight			2800
 }
 
 item assault_ammo
@@ -36,7 +36,7 @@ item assault_ammo
 	size			3
 	is_primary		true
 	dmgtype			"normal"
-	weight			0.5
+	weight			500
 
 	weapon_mod
 	{
@@ -61,6 +61,7 @@ item assault_ammo
 			damage		"42 5"
 			dmgweight	"normal_medium"
 			reaction	true
+			shotorg		"3 6"
 		}
 		firedef
 		{
@@ -84,6 +85,7 @@ item assault_ammo
 			damage				"42 5"
 			dmgweight			"normal_medium"
 			reaction			true
+			shotorg				"3 6"
 		}
 		firedef
 		{
@@ -106,7 +108,8 @@ item assault_ammo
 			time				16
 			damage				"42 5"
 			dmgweight			"normal_medium"
-			reaction	true
+			reaction			true
+			shotorg				"3 6"
 		}
 		firedef
 		{
@@ -128,6 +131,7 @@ item assault_ammo
 			damage		"42 5"
 			dmgweight	"normal_medium"
 			reaction	true
+			shotorg		"3 6"
 		}
 	}
 
@@ -154,6 +158,7 @@ item assault_ammo
 			damage		"42 5"
 			dmgweight	"normal_medium"
 			reaction	true
+			shotorg		"4 5.5"
 		}
 		firedef
 		{
@@ -176,6 +181,7 @@ item assault_ammo
 			damage				"42 5"
 			dmgweight			"normal_medium"
 			reaction			true
+			shotorg				"4 5.5"
 		}
 		firedef
 		{
@@ -197,7 +203,8 @@ item assault_ammo
 			time				16
 			damage				"42 5"
 			dmgweight			"normal_medium"
-			reaction	true
+			reaction			true
+			shotorg				"4 5.5"
 		}
 		firedef
 		{
@@ -219,6 +226,7 @@ item assault_ammo
 			damage		"42 5"
 			dmgweight	"normal_medium"
 			reaction	true
+			shotorg		"4 5.5"
 		}
 	}
 }
@@ -246,7 +254,7 @@ item machinegun
 	size			20
 	is_primary		true
 	is_heavy		true
-	weight			6
+	weight			6000
 }
 
 item machinegun_ammo
@@ -263,7 +271,7 @@ item machinegun_ammo
 	is_primary		true
 	is_heavy		true
 	dmgtype			"normal"
-	weight			1.5
+	weight			1500
 
 	weapon_mod
 	{
@@ -290,6 +298,7 @@ item machinegun_ammo
 			damage				"42 5"
 			dmgweight			"normal_medium"
 			reaction			true
+			shotorg				"2 8"
 		}
 		firedef
 		{
@@ -313,6 +322,7 @@ item machinegun_ammo
 			damage				"42 5"
 			dmgweight			"normal_medium"
 			reaction			true
+			shotorg				"2 8"
 		}
 		firedef
 		{
@@ -336,6 +346,7 @@ item machinegun_ammo
 			damage				"42 5"
 			dmgweight			"normal_medium"
 			reaction			true
+			shotorg				"2 8"
 		}
 	}
 }
@@ -362,7 +373,7 @@ item sniper
 	price			1300
 	size			60
 	is_primary		true
-	weight			6.4
+	weight			6400
 }
 
 item sniper_ammo
@@ -378,7 +389,7 @@ item sniper_ammo
 	size			8
 	is_primary		true
 	dmgtype			"normal"
-	weight			0.5
+	weight			500
 
 	weapon_mod
 	{
@@ -404,6 +415,7 @@ item sniper_ammo
 			dmgweight	"normal_medium"
 			reaction	true
 			throughwall 1
+			shotorg		"2 7"
 		}
 		firedef
 		{
@@ -426,6 +438,7 @@ item sniper_ammo
 			dmgweight	"normal_medium"
 			reaction	true
 			throughwall 1
+			shotorg		"2 7"
 		}
 	}
 }
@@ -453,7 +466,7 @@ item coilgun
 	price			3000
 	size			30
 	is_primary		true
-	weight			7.6
+	weight			7600
 }
 
 item coilgun_ammo
@@ -469,7 +482,7 @@ item coilgun_ammo
 	size			4
 	is_primary		true
 	dmgtype			"normal"
-	weight			1.0
+	weight			1000
 
 	weapon_mod
 	{
@@ -494,7 +507,8 @@ item coilgun_ammo
 			damage		"180 30"
 			dmgweight	"normal_heavy"
 			reaction	true
-			throughwall 3
+			throughwall	3
+			shotorg		"2 6"
 		}
 		firedef
 		{
@@ -516,7 +530,8 @@ item coilgun_ammo
 			damage		"180 30"
 			dmgweight	"normal_heavy"
 			reaction	true
-			throughwall 3
+			throughwall	3
+			shotorg		"2 6"
 		}
 	}
 }
@@ -543,7 +558,7 @@ item pistol
 	price			900
 	size			7
 	is_secondary	true
-	weight			1.0
+	weight			1000
 }
 
 item pistol_ammo
@@ -559,7 +574,7 @@ item pistol_ammo
 	size			1
 	is_secondary	true
 	dmgtype			"normal"
-	weight			0.2
+	weight			200
 
 	weapon_mod
 	{
@@ -584,6 +599,7 @@ item pistol_ammo
 			damage		"30 5"
 			dmgweight	"normal_light"
 			reaction	true
+			shotorg		"1 10.5"
 		}
 		firedef
 		{
@@ -605,6 +621,7 @@ item pistol_ammo
 			time				8
 			damage				"30 5"
 			dmgweight			"normal_light"
+			shotorg				"1 10.5"
 		}
 	}
 }
@@ -631,7 +648,7 @@ item pistol2
 	price			1000
 	size			7
 	is_secondary	true
-	weight			1.8
+	weight			1800
 }
 
 item pistol2_ammo
@@ -647,7 +664,7 @@ item pistol2_ammo
 	size			2
 	is_secondary	true
 	dmgtype			"normal"
-	weight			0.5
+	weight			500
 
 	weapon_mod
 	{
@@ -672,6 +689,7 @@ item pistol2_ammo
 			damage		"20 5"
 			reaction	true
 			dmgweight	"normal_light"
+			shotorg		"1 9.5"
 		}
 		firedef
 		{
@@ -694,6 +712,7 @@ item pistol2_ammo
 			damage				"20 5"
 			dmgweight			"normal_light"
 			reaction			true
+			shotorg				"1 9.5"
 		}
 		firedef
 		{
@@ -716,6 +735,7 @@ item pistol2_ammo
 			damage				"20 5"
 			dmgweight			"normal_light"
 			reaction			true
+			shotorg				"1 9.5"
 		}
 	}
 }
@@ -742,7 +762,7 @@ item smg
 	price			1350
 	size			8
 	is_secondary	true
-	weight			2.0
+	weight			2000
 }
 
 item smg_ammo
@@ -758,7 +778,7 @@ item smg_ammo
 	size			3
 	is_secondary	true
 	dmgtype			"normal"
-	weight			0.4
+	weight			400
 
 	weapon_mod
 	{
@@ -785,6 +805,7 @@ item smg_ammo
 			damage				"15 3"
 			dmgweight			"normal_spray"
 			reaction			true
+			shotorg				"1 11.5"
 		}
 		firedef
 		{
@@ -808,6 +829,7 @@ item smg_ammo
 			damage				"15 3"
 			dmgweight			"normal_spray"
 			reaction			true
+			shotorg				"1 11.5"
 		}
 	}
 }
@@ -834,7 +856,7 @@ item shotgun2
 	price			1500
 	size			25
 	is_primary		true
-	weight			3.1
+	weight			3100
 }
 
 item shotgun2_slug_ammo
@@ -850,7 +872,7 @@ item shotgun2_slug_ammo
 	size			5
 	is_primary		true
 	dmgtype			"normal"
-	weight			0.6
+	weight			600
 
 	weapon_mod
 	{
@@ -877,6 +899,7 @@ item shotgun2_slug_ammo
 			damage				"120 20"
 			dmgweight			"normal_medium"
 			reaction			true
+			shotorg				"3.5 7.5"
 		}
 	}
 }
@@ -902,7 +925,7 @@ item shotgun_micro
 	price			1350
 	size			10
 	is_secondary	true
-	weight			2.0
+	weight			2000
 }
 
 item shotgun_micro_ammo
@@ -918,7 +941,7 @@ item shotgun_micro_ammo
 	size			4
 	is_primary		true
 	dmgtype			"normal"
-	weight			0.4
+	weight			400
 
 	weapon_mod // weap_fds_idx=0
 	{
@@ -945,6 +968,7 @@ item shotgun_micro_ammo
 			damage				"20 5"
 			dmgweight			"normal_spray"
 			reaction			true
+			shotorg				"3.5 8"
 		}
 	}
 
@@ -973,6 +997,7 @@ item shotgun_micro_ammo
 			damage				"20 5"
 			dmgweight			"normal_spray"
 			reaction			true
+			shotorg				"3.5 7.5"
 		}
 	}
 }
@@ -999,7 +1024,7 @@ item flamer
 	size			60
 	is_primary		true
 	is_heavy		true
-	weight			6.0
+	weight			6000
 }
 
 item flamer_ammo
@@ -1016,7 +1041,7 @@ item flamer_ammo
 	is_primary		true
 	is_heavy		true
 	dmgtype			"fire"
-	weight			2.0
+	weight			2000
 
 	weapon_mod
 	{
@@ -1041,6 +1066,7 @@ item flamer_ammo
 			damage				"6 2"
 			dmgweight			"fire_flamer"
 			reaction			true
+			shotorg				"3.5 7"
 		}
 		firedef
 		{
@@ -1062,6 +1088,7 @@ item flamer_ammo
 			damage				"6 2"
 			dmgweight			"fire_flamer"
 			reaction			true
+			shotorg				"3.5 7"
 		}
 		firedef
 		{
@@ -1083,6 +1110,7 @@ item flamer_ammo
 			damage				"6 2"
 			dmgweight			"fire_flamer"
 			reaction			true
+			shotorg				"3.5 7"
 		}
 	}
 }
@@ -1111,7 +1139,7 @@ item rpg
 	size			75
 	is_primary		true
 	is_heavy		true
-	weight			7.0
+	weight			7000
 }
 
 item rpg_ammo
@@ -1128,7 +1156,7 @@ item rpg_ammo
 	is_primary		true
 	is_heavy		true
 	dmgtype			"blast"
-	weight			2.0
+	weight			2000
 
 	weapon_mod
 	{
@@ -1154,6 +1182,7 @@ item rpg_ammo
 			spldmg		"250 20"
 			splrad		7
 			dmgweight	"blast"
+			shotorg		"3.5 7"
 		}
 	}
 }
@@ -1172,7 +1201,7 @@ item rpg_incendiary_ammo
 	is_primary		true
 	is_heavy		true
 	dmgtype			"incendiary"
-	weight			2.0
+	weight			2000
 
 	weapon_mod
 	{
@@ -1199,6 +1228,7 @@ item rpg_incendiary_ammo
 			splrad		7
 			dmgweight	"incendiary"
 			rounds		4
+			shotorg		"3.5 7"
 		}
 	}
 }
@@ -1217,7 +1247,7 @@ item rpg_hybrid_ammo
 	is_primary		true
 	is_heavy		true
 	dmgtype			"blast"
-	weight			2.0
+	weight			2000
 
 	weapon_mod
 	{
@@ -1243,6 +1273,7 @@ item rpg_hybrid_ammo
 			spldmg		"350 20"
 			splrad		7
 			dmgweight	"blast"
+			shotorg		"3.5 7"
 		}
 	}
 }
@@ -1270,7 +1301,7 @@ item grenl
 	size			60
 	is_primary		true
 	is_heavy		true
-	weight			6.0
+	weight			6000
 }
 
 item grenl_ammo
@@ -1287,7 +1318,7 @@ item grenl_ammo
 	is_primary		true
 	is_heavy		true
 	dmgtype			"blast"
-	weight			1.5
+	weight			1500
 
 	weapon_mod
 	{
@@ -1317,6 +1348,7 @@ item grenl_ammo
 			splrad				3
 			dmgweight			"blast"
 			reaction			false
+			shotorg				"3 7"
 		}
 
 		firedef
@@ -1344,6 +1376,7 @@ item grenl_ammo
 			splrad				3
 			dmgweight			"blast"
 			reaction			false
+			shotorg				"3 7"
 		}
 
 		firedef
@@ -1374,6 +1407,7 @@ item grenl_ammo
 			splrad				3
 			dmgweight			"blast"
 			reaction			false
+			shotorg				"3 7"
 		}
 
 		firedef
@@ -1404,6 +1438,7 @@ item grenl_ammo
 			splrad				3
 			dmgweight			"blast"
 			reaction			false
+			shotorg				"3 7"
 		}
 	}
 }
@@ -1422,7 +1457,7 @@ item grenl_incendiary_ammo
 	is_primary		true
 	is_heavy		true
 	dmgtype			"incendiary"
-	weight			1.5
+	weight			1500
 
 	weapon_mod
 	{
@@ -1453,6 +1488,7 @@ item grenl_incendiary_ammo
 			dmgweight			"incendiary"
 			reaction			false
 			rounds				4
+			shotorg				"3 7"
 		}
 
 		firedef
@@ -1481,6 +1517,7 @@ item grenl_incendiary_ammo
 			dmgweight			"incendiary"
 			reaction			false
 			rounds				4
+			shotorg				"3 7"
 		}
 
 		firedef
@@ -1512,6 +1549,7 @@ item grenl_incendiary_ammo
 			dmgweight			"incendiary"
 			reaction			false
 			rounds				4
+			shotorg				"3 7"
 		}
 
 		firedef
@@ -1543,6 +1581,7 @@ item grenl_incendiary_ammo
 			dmgweight			"incendiary"
 			reaction			false
 			rounds				4
+			shotorg				"3 7"
 		}
 	}
 }
@@ -1564,7 +1603,7 @@ item grenl_fle_ammo
 	is_primary		true
 	is_heavy		true
 	dmgtype			"normal"
-	weight			1.0
+	weight			1000
 
 	weapon_mod
 	{
@@ -1588,6 +1627,7 @@ item grenl_fle_ammo
 			damage				"20 5"
 			dmgweight			"normal_spray"
 			reaction			true
+			shotorg				"3 7"
 		}
 	}
 }
@@ -1606,7 +1646,7 @@ item grenl_plasma_ammo
 	is_primary		true
 	is_heavy		true
 	dmgtype			"plasma"
-	weight			1.5
+	weight			1500
 
 	weapon_mod
 	{
@@ -1636,6 +1676,7 @@ item grenl_plasma_ammo
 			splrad				3
 			dmgweight			"plasma_heavy"
 			reaction			false
+			shotorg				"3 7"
 		}
 
 		firedef
@@ -1662,6 +1703,7 @@ item grenl_plasma_ammo
 			spldmg				"180 20"
 			splrad				3
 			dmgweight			"plasma_heavy"
+			shotorg				"3 7"
 		}
 
 		firedef
@@ -1691,6 +1733,7 @@ item grenl_plasma_ammo
 			spldmg				"180 20"
 			splrad				3
 			dmgweight			"plasma_heavy"
+			shotorg				"3 7"
 		}
 
 		firedef
@@ -1720,6 +1763,7 @@ item grenl_plasma_ammo
 			spldmg				"180 20"
 			splrad				3
 			dmgweight			"plasma_heavy"
+			shotorg				"3 7"
 		}
 	}
 }
@@ -1747,7 +1791,7 @@ item bolterrifle
 	size			45
 	is_primary		true
 	is_heavy		true
-	weight			8.4
+	weight			8400
 }
 
 item bolterrifle_ammo
@@ -1764,7 +1808,7 @@ item bolterrifle_ammo
 	is_primary		true
 	is_heavy		true
 	dmgtype			"normal"
-	weight			0.8
+	weight			800
 
 	weapon_mod
 	{
@@ -1790,7 +1834,8 @@ item bolterrifle_ammo
 			damage		"160 20"
 			dmgweight	"normal_heavy"
 			reaction	true
-			throughwall 2
+			throughwall	2
+			shotorg		"3.5 6"
 		}
 
 		firedef
@@ -1812,8 +1857,9 @@ item bolterrifle_ammo
 			time				24
 			damage				"160 20"
 			dmgweight			"normal_heavy"
-			reaction	true
-			throughwall 2
+			reaction			true
+			throughwall			2
+			shotorg				"3.5 6"
 		}
 	}
 }
@@ -1832,7 +1878,7 @@ item bolterrifle_am_ammo
 	is_primary		true
 	is_heavy		true
 	dmgtype			"normal"
-	weight			1.4
+	weight			1400
 
 	weapon_mod
 	{
@@ -1858,7 +1904,8 @@ item bolterrifle_am_ammo
 			damage		"250 20"
 			dmgweight	"blast"
 			reaction	true
-			throughwall 2
+			throughwall	2
+			shotorg		"3.5 6"
 		}
 
 		firedef
@@ -1880,8 +1927,9 @@ item bolterrifle_am_ammo
 			time				24
 			damage				"250 20"
 			dmgweight			"blast"
-			reaction	true
-			throughwall 2
+			reaction			true
+			throughwall			2
+			shotorg				"3.5 6"
 		}
 	}
 }

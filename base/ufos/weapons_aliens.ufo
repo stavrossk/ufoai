@@ -20,7 +20,7 @@ item needlergun
 	price			5000
 	size			45
 	is_primary		true
-	weight			6.0
+	weight			6000
 }
 
 item needlerheavy
@@ -42,7 +42,7 @@ item needlerheavy
 	price			5000
 	size			45
 	is_primary		true
-	weight			9.0
+	weight			9000
 }
 
 item needlergun_ammo
@@ -58,7 +58,7 @@ item needlergun_ammo
 	size			9
 	is_primary		true
 	dmgtype			"normal"
-	weight			1.0
+	weight			1000
 
 	weapon_mod
 	{
@@ -85,6 +85,7 @@ item needlergun_ammo
 			damage		"8 2"
 			dmgweight	"normal_needle"
 			reaction	true
+			shotorg		"4 4"
 		}
 
 		firedef
@@ -109,6 +110,7 @@ item needlergun_ammo
 			damage		"8 2"
 			dmgweight	"normal_needle"
 			reaction	true
+			shotorg		"4 4"
 		}
 		firedef
 		{
@@ -132,6 +134,7 @@ item needlergun_ammo
 			damage		"8 2"
 			dmgweight	"normal_needle"
 			reaction	true
+			shotorg		"4 4"
 		}
 	}
 
@@ -160,6 +163,7 @@ item needlergun_ammo
 			damage		"8 2"
 			dmgweight	"normal_needle"
 			reaction	true
+			shotorg		"2 4.5"
 		}
 
 		firedef
@@ -184,6 +188,7 @@ item needlergun_ammo
 			damage		"8 2"
 			dmgweight	"normal_needle"
 			reaction	true
+			shotorg		"2 4.5"
 		}
 		firedef
 		{
@@ -207,6 +212,7 @@ item needlergun_ammo
 			damage		"8 2"
 			dmgweight	"normal_needle"
 			reaction	true
+			shotorg		"2 4.5"
 		}
 	}
 }

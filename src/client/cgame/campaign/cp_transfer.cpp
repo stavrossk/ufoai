@@ -6,7 +6,7 @@
  */
 
 /*
-Copyright (C) 2002-2014 UFO: Alien Invasion.
+Copyright (C) 2002-2015 UFO: Alien Invasion.
 
 This program is free software; you can redistribute it and/or
 modify it under the terms of the GNU General Public License
@@ -52,7 +52,7 @@ static void TR_EmptyTransferCargo (base_t* destination, transfer_t* transfer, bo
 		/* antimatter */
 		if (transfer->itemAmount[od->idx] > 0) {
 			if (B_GetBuildingStatus(destination, B_ANTIMATTER)) {
-				B_ManageAntimatter(destination, transfer->itemAmount[od->idx], true);
+				B_AddAntimatter(destination, transfer->itemAmount[od->idx]);
 			} else {
 				Com_sprintf(cp_messageBuffer, sizeof(cp_messageBuffer), _("%s does not have Antimatter Storage, antimatter are removed!"), destination->name);
 				MSO_CheckAddNewMessage(NT_TRANSFER_LOST, _("Transport mission"), cp_messageBuffer, MSG_TRANSFERFINISHED);
@@ -70,24 +70,25 @@ static void TR_EmptyTransferCargo (base_t* destination, transfer_t* transfer, bo
 		}
 	}
 
+	/* Employee */
 	if (transfer->hasEmployees && transfer->srcBase) {	/* Employees. (cannot come from a mission) */
-		if (!success) {	/* Employees will be unhired. */
-			for (int i = EMPL_SOLDIER; i < MAX_EMPL; i++) {
-				const employeeType_t type = (employeeType_t)i;
-				TR_ForeachEmployee(employee, transfer, type) {
-					employee->baseHired = transfer->srcBase;	/* Restore back the original baseid. */
-					employee->transfer = false;
-					employee->unhire();
+		for (int i = EMPL_SOLDIER; i < MAX_EMPL; i++) {
+			const employeeType_t type = (employeeType_t)i;
+			TR_ForeachEmployee(employee, transfer, type) {
+				employee->transfer = false;
+				if (!success) {
+					E_DeleteEmployee(employee);
+					continue;
 				}
-			}
-		} else {
-			for (int i = EMPL_SOLDIER; i < MAX_EMPL; i++) {
-				const employeeType_t type = (employeeType_t)i;
-				TR_ForeachEmployee(employee, transfer, type) {
-					employee->baseHired = transfer->srcBase;	/* Restore back the original baseid. */
-					employee->transfer = false;
-					employee->unhire();
-					E_HireEmployee(destination, employee);
+				switch (type) {
+				case EMPL_WORKER:
+					PR_UpdateProductionCap(destination, 0);
+					break;
+				case EMPL_PILOT:
+					AIR_AutoAddPilotToAircraft(destination, employee);
+					break;
+				default:
+					break;
 				}
 			}
 		}
@@ -164,8 +165,12 @@ transfer_t* TR_TransferStart (base_t* srcBase, transfer_t& transData)
 
 	/* Initialize transfer. */
 	OBJZERO(transfer);
-	/* calculate time to go from 1 base to another : 1 day for one quarter of the globe*/
-	time = GetDistanceOnGlobe(transData.destBase->pos, srcBase->pos) / 90.0f;
+	if (srcBase != nullptr && transData.destBase != nullptr) {
+		/* calculate time to go from 1 base to another : 1 day for one quarter of the globe*/
+		time = GetDistanceOnGlobe(transData.destBase->pos, srcBase->pos) / 90.0f;
+	} else {
+		time = DEFAULT_TRANSFER_TIME;
+	}
 	transfer.event.day = ccs.date.day + floor(time);	/* add day */
 	time = (time - floor(time)) * SECONDS_PER_DAY;	/* convert remaining time in second */
 	transfer.event.sec = ccs.date.sec + round(time);
@@ -184,7 +189,7 @@ transfer_t* TR_TransferStart (base_t* srcBase, transfer_t& transData)
 		if (srcBase != nullptr) {
 			const objDef_t* od = INVSH_GetItemByIDX(i);
 			if (Q_streq(od->id, ANTIMATTER_ITEM_ID))
-				B_ManageAntimatter(srcBase, transData.itemAmount[i], false);
+				B_AddAntimatter(srcBase, -transData.itemAmount[i]);
 			else
 				B_AddToStorage(srcBase, od, -transData.itemAmount[i]);
 		}
@@ -192,21 +197,23 @@ transfer_t* TR_TransferStart (base_t* srcBase, transfer_t& transData)
 		transfer.itemAmount[i] = transData.itemAmount[i];
 		count++;
 	}
-	/* Note that the employee remains hired in source base during the transfer, that is
-	 * it takes Living Quarters capacity, etc, but it cannot be used anywhere. */
+
 	for (i = 0; i < MAX_EMPL; i++) {		/* Employees. */
 		LIST_Foreach(transData.employees[i], Employee, employee) {
-			assert(employee->isHiredInBase(srcBase));
+			if (employee->isAssigned())
+				employee->unassign();
 
-			transfer.hasEmployees = true;
-			employee->unassign();
-
-			/** @TODO We unarm soldiers so we don't need to manage storage. This need to be changed later */
-			employee->unequip();
+			const aircraft_t *aircraft = AIR_IsEmployeeInAircraft(employee, nullptr);
+			if (aircraft && cgi->LIST_GetPointer(transData.aircraft, (const void*)aircraft) == nullptr) {
+				/* get a non-constant pointer */
+				aircraft_t* craft = AIR_AircraftGetFromIDX(aircraft->idx);
+				AIR_RemoveEmployee(employee, craft);
+			}
 
 			E_MoveIntoNewBase(employee, transfer.destBase);
-			cgi->LIST_AddPointer(&transfer.employees[i], (void*) employee);
 			employee->transfer = true;
+			cgi->LIST_AddPointer(&transfer.employees[i], (void*) employee);
+			transfer.hasEmployees = true;
 			count++;
 		}
 	}
@@ -229,9 +236,19 @@ transfer_t* TR_TransferStart (base_t* srcBase, transfer_t& transData)
 	LIST_Foreach(transData.aircraft, aircraft_t, aircraft) {
 		const baseCapacities_t capacity = AIR_GetCapacityByAircraftWeight(aircraft);
 		aircraft->status = AIR_TRANSFER;
-		AIR_RemoveEmployees(*aircraft);
 		aircraft->homebase = transData.destBase;
+
+		/* Remove crew if not transfered */
+		if (aircraft->pilot != nullptr && cgi->LIST_GetPointer(transfer.employees[aircraft->pilot->getType()], (void*)aircraft->pilot) == nullptr)
+			AIR_RemoveEmployee(aircraft->pilot, aircraft);
+
+		LIST_Foreach(aircraft->acTeam, Employee, employee) {
+			if (cgi->LIST_GetPointer(transfer.employees[employee->getType()], (void*)employee) == nullptr)
+				AIR_RemoveEmployee(employee, aircraft);
+		}
+
 		cgi->LIST_AddPointer(&transfer.aircraft, (void*)aircraft);
+
 		if (srcBase->aircraftCurrent == aircraft)
 			srcBase->aircraftCurrent = AIR_GetFirstFromBase(srcBase);
 		CAP_AddCurrent(srcBase, capacity, -1);

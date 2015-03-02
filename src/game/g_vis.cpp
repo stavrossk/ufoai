@@ -3,7 +3,7 @@
  */
 
 /*
-Copyright (C) 2002-2014 UFO: Alien Invasion.
+Copyright (C) 2002-2015 UFO: Alien Invasion.
 
 This program is free software; you can redistribute it and/or
 modify it under the terms of the GNU General Public License
@@ -57,8 +57,7 @@ static bool G_LineVis (const vec3_t from, const vec3_t to)
 }
 
 /**
- * @brief calculate how much check is "visible" from @c from
- * @param[in] from The world coordinate to check from
+ * @brief calculate how much check is "visible" by @c ent
  * @param[in] ent The source edict of the check
  * @param[in] check The edict to check how good (or if at all) it is visible
  * @param[in] full Perform a full check in different directions. If this is
@@ -66,23 +65,22 @@ static bool G_LineVis (const vec3_t from, const vec3_t to)
  * @c true this function can also return a value != 0.0 and != 1.0. Try to only
  * use @c true if you really need the full check. Full checks are of course
  * more expensive.
- * @return a value between 0.0 and 1.0 which reflects the visibility from 0
- * to 100 percent
+ * @return a value between 0.0 and 1.0 (one of the ACTOR_VIS_* constants) which
+ * reflects the visibility from 0 to 100 percent
  * @note This call isn't cheap - try to do this only if you really need the
  * visibility check or the statement whether one particular actor see another
  * particular actor.
  * @sa CL_ActorVis
  */
-float G_ActorVis (const vec3_t from, const Edict* ent, const Edict* check, bool full)
+float G_ActorVis (const Edict* ent, const Edict* check, bool full)
 {
 	const float distance = VectorDist(check->origin, ent->origin);
+	vec3_t eyeEnt;
+	G_ActorGetEyeVector(ent, eyeEnt);
 
 	/* units that are very close are visible in the smoke */
 	if (distance > UNIT_SIZE * 1.5f) {
-		vec3_t eyeEnt;
 		Edict* e = nullptr;
-
-		G_ActorGetEyeVector(ent, eyeEnt);
 
 		while ((e = G_EdictsGetNextInUse(e))) {
 			if (G_IsSmoke(e)) {
@@ -110,8 +108,8 @@ float G_ActorVis (const vec3_t from, const Edict* ent, const Edict* check, bool 
 	}
 
 	/* side shifting -> better checks */
-	dir[0] = from[1] - check->origin[1];
-	dir[1] = check->origin[0] - from[0];
+	dir[0] = eyeEnt[1] - check->origin[1];
+	dir[1] = check->origin[0] - eyeEnt[0];
 	dir[2] = 0;
 	VectorNormalizeFast(dir);
 	VectorMA(test, -7, dir, test);
@@ -119,7 +117,7 @@ float G_ActorVis (const vec3_t from, const Edict* ent, const Edict* check, bool 
 	/* do 3 tests */
 	int n = 0;
 	for (int i = 0; i < 3; i++) {
-		if (!G_LineVis(from, test)) {
+		if (!G_LineVis(eyeEnt, test)) {
 			if (full)
 				n++;
 			else
@@ -172,8 +170,6 @@ int G_VisCheckDist (const Edict* const ent)
  */
 bool G_Vis (const int team, const Edict* from, const Edict* check, const vischeckflags_t flags)
 {
-	vec3_t eye;
-
 	/* if any of them isn't in use, then they're not visible */
 	if (!from->inuse || !check->inuse)
 		return false;
@@ -191,7 +187,7 @@ bool G_Vis (const int team, const Edict* from, const Edict* check, const vischec
 		return false;
 
 	/* inverse team rules */
-	if (team < 0 && check->getTeam() == -team)
+	if (team < 0 && from->getTeam() == -team)
 		return false;
 
 	/* check for same pos */
@@ -210,18 +206,19 @@ bool G_Vis (const int team, const Edict* from, const Edict* check, const vischec
 	if (!(flags & VT_NOFRUSTUM) && !G_FrustumVis(from, check->origin))
 		return false;
 
-	/* get viewers eye height */
-	G_ActorGetEyeVector(from, eye);
-
 	/* line trace check */
 	switch (check->type) {
 	case ET_ACTOR:
 	case ET_ACTOR2x2:
-		return G_ActorVis(eye, from, check, false) > ACTOR_VIS_0;
+		return G_ActorVis(from, check, false) > ACTOR_VIS_0;
 	case ET_ITEM:
 	case ET_CAMERA:
-	case ET_PARTICLE:
+	case ET_PARTICLE: {
+		/* get viewers eye height */
+		vec3_t eye;
+		G_ActorGetEyeVector(from, eye);
 		return !G_LineVis(eye, check->origin);
+	}
 	default:
 		return false;
 	}
@@ -245,7 +242,6 @@ bool G_Vis (const int team, const Edict* from, const Edict* check, const vischec
  */
 int G_TestVis (const int team, Edict* check, const vischeckflags_t flags)
 {
-	Edict* from = nullptr;
 	/* store old flag */
 	const int old = G_IsVisibleForTeam(check, team) ? VS_CHANGE : 0;
 
@@ -256,6 +252,7 @@ int G_TestVis (const int team, Edict* check, const vischeckflags_t flags)
 		return VS_YES;
 
 	/* test if check is visible */
+	Edict* from = nullptr;
 	while ((from = G_EdictsGetNextInUse(from)))
 		if (G_Vis(team, from, check, flags))
 			/* visible */
@@ -399,9 +396,7 @@ void G_VisMakeEverythingVisible (void)
  */
 void G_CheckVis (Edict* check, const vischeckflags_t visFlags)
 {
-	int team;
-
-	for (team = 0; team < MAX_TEAMS; team++)
+	for (int team = 0; team < MAX_TEAMS; team++)
 		if (level.num_alive[team]) {
 			if (!check)	/* no special entity given, so check them all */
 				G_CheckVisTeamAll(team, visFlags, nullptr);

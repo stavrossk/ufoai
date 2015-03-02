@@ -4,7 +4,7 @@
  */
 
 /*
-Copyright (C) 2002-2014 UFO: Alien Invasion.
+Copyright (C) 2002-2015 UFO: Alien Invasion.
 
 This program is free software; you can redistribute it and/or
 modify it under the terms of the GNU General Public License
@@ -38,6 +38,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define MAX_WALL_THICKNESS_FOR_SHOOTING_THROUGH 8
 
 typedef enum {
+	ML_SHOOT,
 	ML_WOUND,
 	ML_DEATH
 } morale_modifiers;
@@ -50,14 +51,13 @@ typedef enum {
  */
 static bool G_TeamPointVis (int team, const vec3_t point)
 {
-	Actor* from = nullptr;
-	vec3_t eye;
-
 	/* test if point is visible from team */
+	Actor* from = nullptr;
 	while ((from = G_EdictsGetNextLivingActorOfTeam(from, team))) {
 		if (!G_FrustumVis(from, point))
 			continue;
 		/* get viewers eye height */
+		vec3_t eye;
 		G_ActorGetEyeVector(from, eye);
 
 		/* line of sight */
@@ -107,11 +107,13 @@ static void G_Morale (morale_modifiers type, const Edict* victim, const Edict* a
 
 		/* morale damage depends on the damage */
 		float mod = mob_wound->value * param;
+		if (type == ML_SHOOT)
+			mod *= mob_shoot->value;
 		/* death hurts morale even more than just damage */
 		if (type == ML_DEATH)
 			mod += mob_death->value;
 		/* seeing how someone gets shot increases the morale change */
-		if (actor == victim || (G_FrustumVis(actor, victim->origin) && G_ActorVis(actor->origin, actor, victim, false)))
+		if (actor == victim || (G_FrustumVis(actor, victim->origin) && G_ActorVis(actor, victim, false)))
 			mod *= mof_watching->value;
 		if (attacker != nullptr && actor->isSameTeamAs(attacker)) {
 			/* teamkills are considered to be bad form, but won't cause an increased morale boost for the enemy */
@@ -159,6 +161,61 @@ static void G_Morale (morale_modifiers type, const Edict* victim, const Edict* a
 }
 
 /**
+ * @brief Applies morale changes to actors who find themselves in the general direction of a shot.
+ * @param shooter The shooting actor.
+ * @param fd The firedef used to shoot.
+ * @param from The weapon's muzzle location.
+ * @param weapon The weapon used to shoot.
+ * @param impact The shoot's impact location.
+ */
+static void G_ShotMorale (const Actor* shooter, const fireDef_t* fd, const vec3_t from, const Item* weapon, const vec3_t impact)
+{
+#if 0
+	/* Skip not detectable shoots */
+	if (weapon->def()->dmgtype == gi.csi->damLaser || fd->irgoggles)
+		return;
+
+	Actor* check = nullptr;
+	const float minDist = UNIT_SIZE * 1.5f;
+	while ((check = G_EdictsGetNextLivingActor(check))) {
+		/* Skip yourself */
+		if (check == shooter)
+			continue;
+		pos3_t target;
+		VecToPos(impact, target);
+		/* Skip the hit actor -- morale was already handled */
+		if (check->isSamePosAs(target))
+			continue;
+		vec3_t dir1, dir2;
+		VectorSubtract(check->origin, from, dir1);
+		VectorSubtract(impact, from, dir2);
+		const float len1 = VectorLength(dir1);
+		const float len2 = VectorLength(dir2);
+		const float dot = DotProduct(dir1, dir2);
+		if (dot / (len1 * len2) < 0.7f)
+			continue;
+		/* Skip if shooting next or over an ally */
+		if (check->isSameTeamAs(shooter) && VectorDistSqr(check->origin, shooter->origin)
+				<= minDist * minDist)
+			continue;
+		vec3_t vec1;
+		if (len1 > len2) {
+			VectorSubtract(dir2, dir1, vec1);
+		} else {
+			VectorScale(dir2, dot / (len2 * len2), vec1);
+			VectorSubtract(dir1, vec1, vec1);
+		}
+		const float morDist = (check->isSamePosAs(target) ? UNIT_SIZE * 0.5f : minDist);
+		if (VectorLengthSqr(vec1) <= morDist * morDist) {
+			/* @todo Add a visibility check here? */
+			G_Morale(ML_SHOOT, check, shooter, fd->damage[0]);
+			gi.DPrintf("Suppressing: %s\n", check->chr.name);
+		}
+	}
+#endif
+}
+
+/**
  * @brief Function to calculate possible damages for mock pseudoaction.
  * @param[in,out] mock Pseudo action - only for calculating mock values - nullptr for real action.
  * @param[in] shooter Pointer to attacker for this mock pseudoaction.
@@ -202,19 +259,16 @@ static void G_UpdateShotMock (shot_mock_t* mock, const Edict* shooter, const Edi
  */
 static void G_UpdateCharacterBodycount (Edict* attacker, const fireDef_t* fd, const Actor* target)
 {
-	chrScoreMission_t* scoreMission;
-	chrScoreGlobal_t* scoreGlobal;
-	killtypes_t type;
-
 	if (!attacker || !target)
 		return;
 
-	scoreGlobal = &attacker->chr.score;
-	scoreMission = attacker->chr.scoreMission;
+	chrScoreGlobal_t* scoreGlobal = &attacker->chr.score;
+	chrScoreMission_t* scoreMission = attacker->chr.scoreMission;
 	/* only phalanx soldiers have this */
 	if (!scoreMission)
 		return;
 
+	killtypes_t type;
 	switch (target->getTeam()) {
 	case TEAM_ALIEN:
 		type = KILLED_ENEMIES;
@@ -330,25 +384,25 @@ int G_ApplyProtection (const Edict* target, const byte dmgWeight, int damage)
  * @param[in] attacker The attacker.
  * @param[in] mock pseudo shooting - only for calculating mock values - nullptr for real shots
  * @param[in] impact impact location - @c nullptr for splash damage
+ * @return @c true if damage could be dealt (even if it was 0) @c false otherwise
  * @sa G_SplashDamage
  * @sa G_TakeDamage
  * @sa G_PrintActorStats
  */
-static void G_Damage (Edict* target, const fireDef_t* fd, int damage, Actor* attacker, shot_mock_t* mock, const vec3_t impact)
+static bool G_Damage (Edict* target, const fireDef_t* fd, int damage, Actor* attacker, shot_mock_t* mock, const vec3_t impact)
 {
+	assert(target);
+
 	const bool stunEl = (fd->obj->dmgtype == gi.csi->damStunElectro);
 	const bool stunGas = (fd->obj->dmgtype == gi.csi->damStunGas);
 	const bool shock = (fd->obj->dmgtype == gi.csi->damShock);
 	const bool smoke = (fd->obj->dmgtype == gi.csi->damSmoke);
-	bool isRobot;
-
-	assert(target);
 
 	/* Breakables */
 	if (G_IsBrushModel(target) && G_IsBreakable(target)) {
 		/* Breakables are immune to stun & shock damage. */
 		if (stunEl || stunGas || shock || mock || smoke)
-			return;
+			return false;
 
 		if (damage >= target->HP) {
 			/* don't reset the HP value here, this value is used to distinguish
@@ -364,18 +418,18 @@ static void G_Damage (Edict* target, const fireDef_t* fd, int damage, Actor* att
 		} else {
 			G_TakeDamage(target, damage);
 		}
-		return;
+		return true;
 	}
 
 	/* Actors don't die again. */
 	if (!G_IsLivingActor(target))
-		return;
+		return false;
 	/* Now we know that the target is an actor */
 	Actor* victim = makeActor(target);
 
 	/* only actors after this point - and they must have a teamdef */
 	assert(victim->chr.teamDef);
-	isRobot = CHRSH_IsTeamDefRobot(victim->chr.teamDef);
+	const bool isRobot = CHRSH_IsTeamDefRobot(victim->chr.teamDef);
 
 	/* Apply armour effects. */
 	if (damage > 0) {
@@ -383,7 +437,7 @@ static void G_Damage (Edict* target, const fireDef_t* fd, int damage, Actor* att
 	} else if (damage < 0) {
 		/* Robots can't be healed. */
 		if (isRobot)
-			return;
+			return false;
 	}
 	Com_DPrintf(DEBUG_GAME, " Total damage: %d\n", damage);
 
@@ -398,7 +452,7 @@ static void G_Damage (Edict* target, const fireDef_t* fd, int damage, Actor* att
 	assert(attacker->getTeam() >= 0 && attacker->getTeam() < MAX_TEAMS);
 	assert(victim->getTeam() >= 0 && victim->getTeam() < MAX_TEAMS);
 
-	if (g_nodamage != nullptr && !g_nodamage->integer) {
+	if ((g_nodamage != nullptr && !g_nodamage->integer) || mock) {
 		/* hit */
 		if (mock) {
 			G_UpdateShotMock(mock, attacker, victim, damage);
@@ -420,7 +474,9 @@ static void G_Damage (Edict* target, const fireDef_t* fd, int damage, Actor* att
 				/* entity is dazed */
 				victim->setDazed();
 				G_ClientPrintf(victim->getPlayer(), PRINT_HUD, _("Soldier is dazed!\nEnemy used flashbang!"));
-				return;
+				return !mock;
+			} else {
+				return false;
 			}
 		} else {
 			if (damage < 0) {
@@ -437,9 +493,10 @@ static void G_Damage (Edict* target, const fireDef_t* fd, int damage, Actor* att
 	}
 
 	if (mock)
-		return;
+		return false;
 
 	G_CheckDeathOrKnockout(victim, attacker, fd, damage);
+	return true;
 }
 
 void G_CheckDeathOrKnockout (Actor* target, Actor* attacker, const fireDef_t* fd, int damage)
@@ -503,36 +560,34 @@ static inline bool G_FireAffectedSurface (const cBspSurface_t* surface, const fi
  */
 static void G_SplashDamage (Actor* ent, const fireDef_t* fd, vec3_t impact, shot_mock_t* mock, const trace_t* tr)
 {
-	Edict* check = nullptr;
-	vec3_t center;
-	float dist;
-	int damage;
+	assert(fd->splrad > 0.0f);
 
 	const bool shock = (fd->obj->dmgtype == gi.csi->damShock);
 
-	assert(fd->splrad > 0.0);
-
+	Edict* check = nullptr;
 	while ((check = G_EdictsGetNextInUse(check))) {
 		/* If we use a blinding weapon we skip the target if it's looking
 		 * away from the impact location. */
 		if (shock && !G_FrustumVis(check, impact))
 			continue;
 
+		const bool isActor = G_IsLivingActor(check);
+		vec3_t center;
 		if (G_IsBrushModel(check) && G_IsBreakable(check))
 			check->absBox.getCenter(center);
-		else if (G_IsLivingActor(check) || G_IsBreakable(check))
+		else if (isActor || G_IsBreakable(check))
 			VectorCopy(check->origin, center);
 		else
 			continue;
 
 		/* check for distance */
-		dist = VectorDist(impact, center);
-		dist = dist > UNIT_SIZE / 2 ? dist - UNIT_SIZE / 2 : 0;
+		float dist = VectorDist(impact, center);
+		dist = dist > UNIT_SIZE / 2 ? dist - UNIT_SIZE / 2 : 0.0f;
 		if (dist > fd->splrad)
 			continue;
 
 		if (fd->irgoggles) {
-			if (G_IsActor(check)) {
+			if (isActor) {
 				/* check whether this actor (check) is in the field of view of the 'shooter' (ent) */
 				if (G_FrustumVis(ent, check->origin)) {
 					if (!mock) {
@@ -546,18 +601,22 @@ static void G_SplashDamage (Actor* ent, const fireDef_t* fd, vec3_t impact, shot
 		}
 
 		/* check for walls */
-		if (G_IsLivingActor(check) && G_TestLine(impact, check->origin))
+		if (isActor && G_TestLine(impact, check->origin))
 			continue;
 
 		/* do damage */
-		if (shock)
-			damage = 0;
-		else
-			damage = fd->spldmg[0] * (1.0 - dist / fd->splrad);
+		const int damage = shock ? 0 : fd->spldmg[0] * (1.0f - dist / fd->splrad);
 
 		if (mock)
 			mock->allow_self = true;
-		G_Damage(check, fd, damage, ent, mock, nullptr);
+		/* Send hurt sounds for actors, but only if they'll recieve damage from this attack */
+		if (G_Damage(check, fd, damage, ent, mock, nullptr) && isActor
+				&& (G_ApplyProtection(check, fd->dmgweight,  damage) > 0) && !shock) {
+			const teamDef_t* teamDef = check->chr.teamDef;
+			const int gender = check->chr.gender;
+			const char* sound = teamDef->getActorSound(gender, SND_HURT);
+			G_EventSpawnSound(G_VisToPM(check->visflags), *check, nullptr, sound);
+		}
 		if (mock)
 			mock->allow_self = false;
 	}
@@ -577,9 +636,7 @@ static void G_SplashDamage (Actor* ent, const fireDef_t* fd, vec3_t impact, shot
  */
 static void G_SpawnItemOnFloor (const pos3_t pos, const Item* item)
 {
-	Edict* floor;
-
-	floor = G_GetFloorItemFromPos(pos);
+	Edict* floor = G_GetFloorItemFromPos(pos);
 	if (floor == nullptr) {
 		floor = G_SpawnFloor(pos);
 
@@ -673,9 +730,7 @@ static void G_ShootGrenade (const Player& player, Actor* shooter, const fireDef_
 	}
 
 	/* cap start speed */
-	float speed = VectorLength(startV);
-	if (speed > fd->range)
-		speed = fd->range;
+	const float speed = std::min(VectorLength(startV), fd->range);
 
 	/* add random effects and get new dir */
 	vec3_t angles;
@@ -888,11 +943,6 @@ static void G_ShootSingle (Actor* ent, const fireDef_t* fd, const vec3_t from, c
 	if (!pointTrace) {
 		VectorNormalizeFast(dir);			/* Normalize the vector i.e. make length 1.0 */
 
-		/* places the starting-location a bit away from the attacker-model/grid. */
-		/** @todo need some change to reflect 2x2 units.
-		 * Also might need a check if the distance is bigger than the one to the impact location. */
-		/** @todo can't we use the fd->shotOrg here and get rid of the sv_shot_origin cvar? */
-		VectorMA(cur_loc, sv_shot_origin->value, dir, cur_loc);
 		vec3_t angles;
 		VecToAngles(dir, angles);		/* Get the angles of the direction vector. */
 
@@ -925,11 +975,15 @@ static void G_ShootSingle (Actor* ent, const fireDef_t* fd, const vec3_t from, c
 	else
 		damage = std::max(0.0f, fd->damage[0] + (fd->damage[1] * crand()));
 
-	VectorMA(cur_loc, UNIT_SIZE, dir, impact);
-	trace_t tr = G_Trace(Line(cur_loc, impact), ent, MASK_SHOT);
+	/* Check if we are shooting over an adjacent crouching friendly unit */
+	VectorMA(cur_loc, UNIT_SIZE * 1.4f, dir, impact);
+	const Edict* passEnt = ent;
+	trace_t tr = G_Trace(Line(cur_loc, impact), passEnt, MASK_SHOT);
 	Edict* trEnt = G_EdictsGetByNum(tr.entNum);	/* the ent possibly hit by the trace */
-	if (trEnt && (trEnt->isSameTeamAs(ent) || G_IsCivilian(trEnt)) && G_IsCrouched(trEnt) && !FIRESH_IsMedikit(fd))
+	if (trEnt && (trEnt->isSameTeamAs(ent) || G_IsCivilian(trEnt)) && G_IsCrouched(trEnt) && !FIRESH_IsMedikit(fd)) {
 		VectorMA(cur_loc, UNIT_SIZE * 1.4f, dir, cur_loc);
+		passEnt = trEnt;
+	}
 
 	vec3_t tracefrom;	/* sum */
 	VectorCopy(cur_loc, tracefrom);
@@ -943,7 +997,7 @@ static void G_ShootSingle (Actor* ent, const fireDef_t* fd, const vec3_t from, c
 
 		/* Do the trace from current position of the projectile
 		 * to the end_of_range location.*/
-		tr = G_Trace(Line(tracefrom, impact), ent, MASK_SHOT);
+		tr = G_Trace(Line(tracefrom, impact), passEnt, MASK_SHOT);
 		trEnt = G_EdictsGetByNum(tr.entNum);	/* the ent possibly hit by the trace */
 
 #ifdef DEBUG
@@ -1059,24 +1113,6 @@ static void G_ShootSingle (Actor* ent, const fireDef_t* fd, const vec3_t from, c
 	}
 }
 
-void G_GetShotOrigin (const Edict* shooter, const fireDef_t* fd, const vec3_t dir, vec3_t shotOrigin)
-{
-	/* get weapon position */
-	gi.GridPosToVec(shooter->fieldSize, shooter->pos, shotOrigin);
-	/* adjust height: */
-	shotOrigin[2] += fd->shotOrg[1];
-	/* adjust horizontal: */
-	if (fd->shotOrg[0] != 0) {
-		/* get "right" and "left" of a unit(rotate dir 90 on the x-y plane): */
-		const float x = dir[1];
-		const float y = -dir[0];
-		const float length = sqrt(dir[0] * dir[0] + dir[1] * dir[1]);
-		/* assign adjustments: */
-		shotOrigin[0] += x * fd->shotOrg[0] / length;
-		shotOrigin[1] += y * fd->shotOrg[0] / length;
-	}
-}
-
 /**
  * @brief Prepares weapon, firemode and container used for shoot.
  * @param[in] ent Pointer to attacker.
@@ -1090,12 +1126,10 @@ void G_GetShotOrigin (const Edict* shooter, const fireDef_t* fd, const vec3_t di
  */
 static bool G_PrepareShot (Edict* ent, shoot_types_t shootType, fireDefIndex_t firemode, Item** weapon, containerIndex_t* container, const fireDef_t** fd)
 {
-	const fireDef_t* fdArray;
-	Item* item;
-
 	if (shootType >= ST_NUM_SHOOT_TYPES)
 		gi.Error("G_GetShotFromType: unknown shoot type %i.\n", shootType);
 
+	Item* item;
 	if (IS_SHOT_HEADGEAR(shootType)) {
 		item = ent->chr.inv.getHeadgear();
 		if (!item)
@@ -1114,7 +1148,7 @@ static bool G_PrepareShot (Edict* ent, shoot_types_t shootType, fireDefIndex_t f
 	}
 
 	/* Get firedef from the weapon entry instead */
-	fdArray = item->getFiredefs();
+	const fireDef_t* fdArray = item->getFiredefs();
 	if (fdArray == nullptr)
 		return false;
 
@@ -1281,9 +1315,6 @@ bool G_ClientShoot (const Player& player, Actor* actor, const pos3_t at, shoot_t
 			mask |= G_TeamToVisMask(i);
 
 	if (!mock) {
-		/* State info so we can check if an item was already removed. */
-		bool itemAlreadyRemoved = false;
-
 		/* check whether this has forced any reaction fire */
 		if (allowReaction) {
 			G_ReactionFirePreShot(actor, tusNeeded);  /* if commented out,  this disables the 'draw' situation */
@@ -1301,6 +1332,8 @@ bool G_ClientShoot (const Player& player, Actor* actor, const pos3_t at, shoot_t
 		/* send shot sound to the others */
 		G_EventShootHidden(mask, fd, true);
 
+		/* State info so we can check if an item was already removed. */
+		bool itemAlreadyRemoved = false;
 		/* ammo... */
 		if (fd->ammo) {
 			if (ammo > 0 || !weapon->def()->thrown) {
@@ -1311,48 +1344,54 @@ bool G_ClientShoot (const Player& player, Actor* actor, const pos3_t at, shoot_t
 				assert(invDef->single);
 				itemAlreadyRemoved = true;	/* for assert only */
 				game.invi.emptyContainer(&actor->chr.inv, invDef->id);
-				G_EventInventoryDelete(*actor, G_VisToPM(actor->visflags), invDef->id, 0, 0);
 				G_ReactionFireSettingsUpdate(actor, actor->chr.RFmode.getFmIdx(), actor->chr.RFmode.getHand(),
 						actor->chr.RFmode.getWeapon());
+				G_EventInventoryDelete(*actor, G_VisToPM(actor->visflags), invDef->id, 0, 0);
 			}
 		}
 
 		/* remove throwable oneshot && deplete weapon from inventory */
 		if (weapon->def()->thrown && weapon->def()->oneshot && weapon->def()->deplete) {
-			const invDef_t* invDef = INVDEF(container);
 			if (itemAlreadyRemoved)
 				gi.Error("Item %s is already removed", weapon->def()->id);
+			const invDef_t* invDef = INVDEF(container);
 			assert(invDef->single);
 			game.invi.emptyContainer(&actor->chr.inv, invDef->id);
-			G_EventInventoryDelete(*actor, G_VisToPM(actor->visflags), invDef->id, 0, 0);
 			G_ReactionFireSettingsUpdate(actor, actor->chr.RFmode.getFmIdx(), actor->chr.RFmode.getHand(),
 					actor->chr.RFmode.getWeapon());
+			G_EventInventoryDelete(*actor, G_VisToPM(actor->visflags), invDef->id, 0, 0);
 		}
 	}
 
 	vec3_t shotOrigin;
-	G_GetShotOrigin(actor, fd, dir, shotOrigin);
+	fd->getShotOrigin(actor->origin, dir, actor->isCrouched(), shotOrigin);
 
 	/* Fire all shots. */
 	vec3_t impact;
 	for (int i = 0; i < shots; i++)
-		if (fd->gravity)
+		if (fd->gravity) {
 			G_ShootGrenade(player, actor, fd, shotOrigin, at, mask, weapon, mock, z_align, impact);
-		else
+		} else {
 			G_ShootSingle(actor, fd, shotOrigin, at, mask, weapon, mock, z_align, i, shootType, impact);
+			if (mor_panic->integer)
+				G_ShotMorale(actor, fd, shotOrigin, weapon, impact);
+		}
 
 	if (!mock) {
+		const bool smoke = fd->obj->dmgtype == gi.csi->damSmoke;
+		const bool incendiary = fd->obj->dmgtype == gi.csi->damIncendiary;
+		const bool stunGas = fd->obj->dmgtype == gi.csi->damStunGas;
 		/* Ignore off-map impacts when spawning fire, smoke, etc fields */
 		if (gi.isOnMap(impact)) {
-			if (fd->obj->dmgtype == gi.csi->damSmoke) {
+			if (smoke) {
 				const int damage = std::max(0.0f, fd->damage[0] + fd->damage[1] * crand());
 				const int rounds = std::max(2, fd->rounds);
 				G_SpawnSmokeField(impact, "smokefield", rounds, damage, fd->splrad);
-			} else if (fd->obj->dmgtype == gi.csi->damIncendiary) {
+			} else if (incendiary) {
 				const int damage = std::max(0.0f, fd->damage[0] + fd->damage[1] * crand());
 				const int rounds = std::max(2, fd->rounds);
 				G_SpawnFireField(impact, "firefield", rounds, damage, fd->splrad);
-			} else if (fd->obj->dmgtype == gi.csi->damStunGas) {
+			} else if (stunGas) {
 				const int damage = std::max(0.0f, fd->damage[0] + fd->damage[1] * crand());
 				const int rounds = std::max(2, fd->rounds);
 				G_SpawnStunSmokeField(impact, "green_smoke", rounds, damage, fd->splrad);
@@ -1360,14 +1399,12 @@ bool G_ClientShoot (const Player& player, Actor* actor, const pos3_t at, shoot_t
 		}
 
 		/* check whether this caused a touch event for close actors */
-		/* NOTE: Right now stunned actors are skipped from activating triggers, which makes sense
-		 * if triggers could only be activated by walking in them (which was the original behaviour), now
-		 * its use here implies that may not always be the case (it does make sense that they would affected
-		 * by fire fields and similar triggers after all) */
-		/* @todo decide if stunned should be able to touch some triggers and adjust accordingly */
-		Edict* closeActor = nullptr;
-		while ((closeActor = G_FindRadius(closeActor, impact, fd->splrad, ET_ACTOR))) {
-			G_TouchTriggers(closeActor);
+		if (smoke || incendiary || stunGas) {
+			const entity_type_t type = smoke ? ET_SMOKE : incendiary ? ET_FIRE : ET_SMOKESTUN;
+			Edict* closeActor = nullptr;
+			while ((closeActor = G_FindRadius(closeActor, impact, fd->splrad, ET_ACTOR))) {
+				G_TouchTriggers(closeActor, type);
+			}
 		}
 
 		/* send TUs if actor still alive */

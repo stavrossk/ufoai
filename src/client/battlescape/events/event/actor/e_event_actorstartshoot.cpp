@@ -3,7 +3,7 @@
  */
 
 /*
-Copyright (C) 2002-2014 UFO: Alien Invasion.
+Copyright (C) 2002-2015 UFO: Alien Invasion.
 
 This program is free software; you can redistribute it and/or
 modify it under the terms of the GNU General Public License
@@ -35,6 +35,7 @@ int CL_ActorStartShootTime (const eventRegister_t* self, dbuffer* msg, eventTimi
 	const int eventTime = eventTiming->nextTime;
 
 	eventTiming->parsedShot = true;
+	eventTiming->parsedDeath = false;
 	eventTiming->nextTime += 300;
 	eventTiming->shootTime = eventTiming->nextTime;
 

@@ -4,7 +4,7 @@
  */
 
 /*
-Copyright (C) 2002-2014 UFO: Alien Invasion.
+Copyright (C) 2002-2015 UFO: Alien Invasion.
 
 This program is free software; you can redistribute it and/or
 modify it under the terms of the GNU General Public License
@@ -27,6 +27,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 void HOS_InitStartup(void);
 bool HOS_HealCharacter(character_t* chr, bool hospital);
-bool HOS_HealEmployee(Employee* employee);
-void HOS_HealAll(const base_t* const base);
 void HOS_HospitalRun(void);
+float HOS_GetInjuryLevel(const character_t& chr);
+bool HOS_NeedsHealing(const character_t& chr);

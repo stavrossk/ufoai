@@ -4,7 +4,7 @@
  */
 
 /*
-Copyright (C) 2002-2014 UFO: Alien Invasion.
+Copyright (C) 2002-2015 UFO: Alien Invasion.
 
 This program is free software; you can redistribute it and/or
 modify it under the terms of the GNU General Public License
@@ -43,6 +43,5 @@ typedef struct shot_mock_s {
 
 int G_ApplyProtection(const Edict* target, const byte dmgWeight, int damage);
 void G_CheckDeathOrKnockout(Actor* target, Actor* attacker, const fireDef_t* fd, int damage);
-void G_GetShotOrigin(const Edict* shooter, const fireDef_t* fd, const vec3_t dir, vec3_t shotOrigin);
 bool G_ClientShoot(const Player& player, Actor* actor, const pos3_t at, shoot_types_t shootType, fireDefIndex_t firemode, shot_mock_t* mock, bool allowReaction, int z_align);
 void G_CalcEffectiveSpread(const Actor* ent, const fireDef_t* fd, vec2_t effSpread);

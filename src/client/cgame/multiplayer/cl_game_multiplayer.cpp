@@ -4,7 +4,7 @@
  */
 
 /*
-Copyright (C) 2002-2014 UFO: Alien Invasion.
+Copyright (C) 2002-2015 UFO: Alien Invasion.
 
 This program is free software; you can redistribute it and/or
 modify it under the terms of the GNU General Public License
@@ -46,7 +46,7 @@ static void GAME_MP_NotifyEvent (event_t eventType)
 	if (eventType != EV_RESET)
 		return;
 
-	cgi->HUD_InitUI("multiplayerInGame");
+	cgi->HUD_InitUI("missionoptions");
 }
 
 static void GAME_MP_EndRoundAnnounce (int playerNum, int team)
@@ -91,6 +91,17 @@ static void GAME_MP_StartServer_f (void)
 	cgi->Cvar_Set("rm_ufo", "");
 	cgi->Cvar_Set("sv_hurtaliens", "0");
 
+	if (md->mapTheme[0] == '+') {
+		const linkedList_t* const ufos = md->ufos;
+		const linkedList_t* const crafts = md->aircraft;
+		if (ufos)
+			cgi->Cvar_Set("rm_ufo", "%s",
+					cgi->Com_GetRandomMapAssemblyNameForCraft((const char*)ufos->data));
+		if (crafts)
+			cgi->Cvar_Set("rm_drop", "%s",
+					cgi->Com_GetRandomMapAssemblyNameForCraft((const char*)crafts->data));
+	}
+
 	if (md->teams)
 		cgi->Cvar_SetValue("sv_maxteams", md->teams);
 	else
@@ -98,7 +109,7 @@ static void GAME_MP_StartServer_f (void)
 
 	cgi->Cmd_ExecuteString("map %s %s %s", cgi->Cvar_GetInteger("mn_serverday") ? "day" : "night", md->mapTheme, md->params ? (const char*)cgi->LIST_GetRandom(md->params) : "");
 
-	cgi->UI_InitStack("multiplayer_wait", "multiplayerInGame");
+	cgi->UI_InitStack("multiplayer_wait", "missionoptions");
 }
 
 /**

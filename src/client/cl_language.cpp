@@ -4,7 +4,7 @@
  */
 
 /*
-All original material Copyright (C) 2002-2014 UFO: Alien Invasion.
+All original material Copyright (C) 2002-2015 UFO: Alien Invasion.
 
 This program is free software; you can redistribute it and/or
 modify it under the terms of the GNU General Public License
@@ -365,6 +365,9 @@ void CL_LanguageInitMenu (void)
 	/* sort the list, and register it to the menu */
 	UI_SortOptions(&languageOption);
 	UI_RegisterOption(OPTION_LANGUAGES, languageOption);
+
+	/* Set to the locale remembered previously. */
+	CL_LanguageTryToSet(s_language->string);
 }
 
 /**
@@ -390,9 +393,6 @@ void CL_LanguageInit (void)
 	}
 
 	Com_DPrintf(DEBUG_CLIENT, "CL_LanguageInit: system language is: '%s'\n", systemLanguage);
-
-	/* Set to the locale remembered previously. */
-	CL_LanguageTryToSet(systemLanguage);
 }
 
 /**

@@ -4,7 +4,7 @@
  */
 
 /*
-All original material Copyright (C) 2002-2014 UFO: Alien Invasion.
+All original material Copyright (C) 2002-2015 UFO: Alien Invasion.
 
 Original file from Quake 2 v3.21: quake2-2.31/game/g_local.h
 Copyright (C) 1997-2001 Id Software, Inc.
@@ -185,6 +185,7 @@ extern cvar_t* ai_multiplayeraliens;
 
 extern cvar_t* mob_death;
 extern cvar_t* mob_wound;
+extern cvar_t* mob_shoot;
 extern cvar_t* mof_watching;
 extern cvar_t* mof_teamkill;
 extern cvar_t* mof_civilian;
@@ -303,7 +304,6 @@ typedef struct moveinfo_s {
 typedef struct AI_s {
 	char type[MAX_QPATH];	/**< Lua file used by the AI. */
 	char subtype[MAX_VAR];	/**< Subtype to be used by AI. */
-	lua_State* L;			/**< The lua state used by the AI. */
 } AI_t;
 
 typedef struct camera_edict_data_s {

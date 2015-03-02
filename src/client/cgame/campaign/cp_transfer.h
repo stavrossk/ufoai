@@ -4,7 +4,7 @@
  */
 
 /*
-Copyright (C) 2002-2014 UFO: Alien Invasion.
+Copyright (C) 2002-2015 UFO: Alien Invasion.
 
 This program is free software; you can redistribute it and/or
 modify it under the terms of the GNU General Public License
@@ -23,6 +23,9 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 */
 
 #pragma once
+
+/** @brief Default transfer time for cases with no source/dest base */
+#define DEFAULT_TRANSFER_TIME 2.0f
 
 /** @brief Transfer information (they are being stored in ccs.transfers). */
 typedef struct transfer_s {

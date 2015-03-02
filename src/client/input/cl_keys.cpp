@@ -6,7 +6,7 @@
  */
 
 /*
-All original material Copyright (C) 2002-2014 UFO: Alien Invasion.
+All original material Copyright (C) 2002-2015 UFO: Alien Invasion.
 
 Original file from Quake 2 v3.21: quake2-2.31/client/keys.c
 Copyright (C) 1997-2001 Id Software, Inc.
@@ -483,12 +483,12 @@ int Key_StringToKeynum (const char* str)
 const char* Key_KeynumToString (int keynum)
 {
 	const keyName_t* kn;
-	static char tinystr[2];
 
 	if (keynum == -1)
 		return "<KEY NOT FOUND>";
 	/** @todo use isprint here? */
 	if (keynum > 32 && keynum < 127) {	/* printable ascii */
+		static char tinystr[2];
 		tinystr[0] = keynum;
 		tinystr[1] = 0;
 		return tinystr;

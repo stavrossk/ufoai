@@ -4,7 +4,7 @@
  */
 
 /*
-Copyright (C) 2002-2014 UFO: Alien Invasion.
+Copyright (C) 2002-2015 UFO: Alien Invasion.
 
 This program is free software; you can redistribute it and/or
 modify it under the terms of the GNU General Public License
@@ -225,7 +225,7 @@ void B_DrawBuilding(const building_t* building);
 
 /* antimatter */
 int B_AntimatterInBase(const base_t* base);
-void B_ManageAntimatter(base_t* base, int amount, bool add);
+int B_AddAntimatter(base_t* base, int amount);
 
 /* savesystem */
 void B_SaveBaseSlotsXML(const baseWeapon_t* weapons, const int numWeapons, xmlNode_t* p);

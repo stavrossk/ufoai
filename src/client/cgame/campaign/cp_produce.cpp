@@ -5,7 +5,7 @@
  */
 
 /*
-Copyright (C) 2002-2014 UFO: Alien Invasion.
+Copyright (C) 2002-2015 UFO: Alien Invasion.
 
 This program is free software; you can redistribute it and/or
 modify it under the terms of the GNU General Public License
@@ -121,10 +121,7 @@ void PR_UpdateRequiredItemsInBasestorage (base_t* base, int amount, const requir
 			break;
 		}
 		case RS_LINK_ANTIMATTER:
-			if (req->amount > 0)
-				B_ManageAntimatter(base, req->amount * amount, true);
-			else if (req->amount < 0)
-				B_ManageAntimatter(base, req->amount * -amount, false);
+			B_AddAntimatter(base, req->amount * amount);
 			break;
 		case RS_LINK_TECH:
 		case RS_LINK_TECH_NOT:
@@ -463,7 +460,7 @@ static void PR_FinishDisassembly (base_t* base, production_t* prod)
 			continue;
 
 		if (Q_streq(compOd->id, ANTIMATTER_ITEM_ID)) {
-			B_ManageAntimatter(base, amount, true);
+			B_AddAntimatter(base, amount);
 		} else {
 			technology_t* tech = RS_GetTechForItem(compOd);
 			B_AddToStorage(base, compOd, amount);

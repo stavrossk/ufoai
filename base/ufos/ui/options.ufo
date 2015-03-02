@@ -1309,6 +1309,7 @@ window options
 					size	"512 30"
 					onMouseEnter 	{ *node:this.audio_music_label@color = "1 1 1 0.9" }
 					onMouseLeave 	{ *node:this.audio_music_label@color = "1 1 1 0.5" }
+					visiblewhen		"*cvar:snd_init"
 				}
 
 				string audio_music_label
@@ -1332,14 +1333,42 @@ window options
 				}
 			}
 
-			// Sound effects volume
-			panel audio_effects_volume
+			// Enable/disable music
+			panel audio_music_toggle
 			{
 				{
 					pos		"0 60"
 					size	"512 30"
+					onMouseEnter 	{ *node:this.audio_music_toggle_label@color = "1 1 1 0.9" }
+					onMouseLeave 	{ *node:this.audio_music_toggle_label@color = "1 1 1 0.5" }
+					visiblewhen		"*cvar:snd_init"
+				}
+
+				string audio_music_toggle_label
+				{
+					string		"_Enable music"
+					pos			"5 5"
+					size		"200 20"
+					color		"1 1 1 0.5"
+				}
+
+				CheckBox audio_music_toggle_opt
+				{
+					current		*cvar:snd_music_play
+					pos			"472 6"
+					size		"20 18"
+				}
+			}
+
+			// Sound effects volume
+			panel audio_effects_volume
+			{
+				{
+					pos		"0 90"
+					size	"512 30"
 					onMouseEnter 	{ *node:this.audio_effects_label@color = "1 1 1 0.9" }
 					onMouseLeave 	{ *node:this.audio_effects_label@color = "1 1 1 0.5" }
+					visiblewhen		"*cvar:snd_init"
 				}
 
 				string audio_effects_label
@@ -1367,10 +1396,11 @@ window options
 			panel audio_menu
 			{
 				{
-					pos		"0 90"
+					pos		"0 120"
 					size	"512 30"
 					onMouseEnter 	{ *node:this.audio_menu_label@color = "1 1 1 0.9" }
 					onMouseLeave 	{ *node:this.audio_menu_label@color = "1 1 1 0.5" }
+					visiblewhen		"*cvar:snd_init"
 				}
 
 				string audio_menu_label
@@ -1393,10 +1423,11 @@ window options
 			panel audio_sample
 			{
 				{
-					pos		"0 150"
+					pos		"0 180"
 					size	"512 60"
 					onMouseEnter 	{ *node:this.audio_sample_label@color = "1 1 1 0.9" }
 					onMouseLeave 	{ *node:this.audio_sample_label@color = "1 1 1 0.5" }
+					visiblewhen		"*cvar:snd_init"
 				}
 
 				string audio_sample_label
@@ -1445,6 +1476,7 @@ window options
 					font			"f_verysmall_bold"
 					selectcolor		"0 0 0 0.9"
 					onClick			{ cmd "snd_restart;" }
+					visiblewhen		"*cvar:snd_init"
 				}
 			}
 		}

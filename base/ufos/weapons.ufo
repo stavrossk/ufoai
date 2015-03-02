@@ -18,7 +18,7 @@ item medikit
 	oneshot		true
 	ammo			5
 	dmgtype 	"normal"
-	weight		2.0
+	weight		2000
 
 	weapon_mod
 	{
@@ -93,7 +93,7 @@ item irgoggles
 	thrown		true
 	headgear		true
 	dmgtype "normal"
-	weight		0.2
+	weight		200
 
 	weapon_mod
 	{
@@ -147,7 +147,7 @@ item fraggrenade
 	is_misc	true
 	thrown		true
 	dmgtype "blast"
-	weight		0.4
+	weight		400
 
 	weapon_mod
 	{
@@ -176,6 +176,7 @@ item fraggrenade
 			spldmg	"110 30"
 			splrad	4
 			dmgweight "blast"
+			shotorg	"7.5 6.5"
 		}
 		firedef
 		{
@@ -202,6 +203,7 @@ item fraggrenade
 			spldmg	"110 30"
 			splrad	4
 			dmgweight "blast"
+			shotorg	"5.5 2"
 		}
 	}
 }
@@ -225,7 +227,7 @@ item flashbang
 	is_misc	true
 	thrown		true
 	dmgtype "shock"
-	weight		0.2
+	weight		200
 
 	weapon_mod
 	{
@@ -255,6 +257,7 @@ item flashbang
 			spldmg	"999 0"	// TODO: needed at all?
 			splrad	5
 			dmgweight "shock"
+			shotorg	"7.5 6.5"
 		}
 		firedef
 		{
@@ -282,6 +285,7 @@ item flashbang
 			spldmg	"999 0"	// TODO: needed at all?
 			splrad	5
 			dmgweight "shock"
+			shotorg	"5.5 2"
 		}
 	}
 }
@@ -304,7 +308,7 @@ item smokegrenade
 	is_misc	true
 	thrown		true
 	dmgtype "smoke"
-	weight		0.2
+	weight		200
 
 	weapon_mod
 	{
@@ -334,6 +338,7 @@ item smokegrenade
 			splrad	3
 			dmgweight "normal_light"
 			rounds	4
+			shotorg	"7.5 6.5"
 		}
 		firedef
 		{
@@ -361,6 +366,7 @@ item smokegrenade
 			splrad	3
 			dmgweight "normal_light"
 			rounds	4
+			shotorg	"5.5 2"
 		}
 	}
 }
@@ -383,7 +389,7 @@ item stungrenade
 	is_misc	true
 	thrown		true
 	dmgtype "stun_gas"
-	weight		0.2
+	weight		200
 
 	weapon_mod
 	{
@@ -415,6 +421,7 @@ item stungrenade
 			splrad	3
 			dmgweight "stun_gas"
 			rounds	4
+			shotorg	"7.5 6.5"
 		}
 		firedef
 		{
@@ -444,6 +451,7 @@ item stungrenade
 			splrad	3
 			dmgweight "stun_gas"
 			rounds	4
+			shotorg	"5.5 2"
 		}
 	}
 }
@@ -467,7 +475,7 @@ item stungrenade_alien
 	is_misc	true
 	thrown		true
 	dmgtype "stun_gas"
-	weight		0.2
+	weight		200
 
 	weapon_mod
 	{
@@ -499,6 +507,7 @@ item stungrenade_alien
 			splrad	4
 			dmgweight "stun_gas"
 			rounds	4
+			shotorg	"7.5 6.5"
 		}
 		firedef
 		{
@@ -528,6 +537,7 @@ item stungrenade_alien
 			splrad	4
 			dmgweight "stun_gas"
 			rounds	4
+			shotorg	"5.5 2"
 		}
 	}
 }
@@ -550,7 +560,7 @@ item incgrenade
 	is_misc	true
 	thrown		true
 	dmgtype 	"incendiary"
-	weight		0.2
+	weight		200
 
 	weapon_mod
 	{
@@ -582,6 +592,7 @@ item incgrenade
 			splrad	3
 			dmgweight "incendiary"
 			rounds	4
+			shotorg	"7.5 6.5"
 		}
 		firedef
 		{
@@ -611,6 +622,7 @@ item incgrenade
 			splrad	3
 			dmgweight "incendiary"
 			rounds	4
+			shotorg	"5.5 2"
 		}
 	}
 }
@@ -633,7 +645,7 @@ item plasmagrenade
 	is_misc	true
 	thrown		true
 	dmgtype "plasma"
-	weight		0.6
+	weight		600
 
 	weapon_mod
 	{
@@ -662,6 +674,7 @@ item plasmagrenade
 			spldmg	"160 20"
 			splrad	5
 			dmgweight "plasma_heavy"
+			shotorg	"7.5 6.5"
 		}
 		firedef
 		{
@@ -688,6 +701,7 @@ item plasmagrenade
 			spldmg	"160 20"
 			splrad	5
 			dmgweight "plasma_heavy"
+			shotorg	"5.5 2"
 		}
 	}
 }
@@ -711,7 +725,7 @@ item bomb1
 	notonmarket	true
 	thrown		true
 	is_misc	true
-	weight		4.0
+	weight		4000
 }
 
 /*
@@ -733,6 +747,6 @@ item bomb2
 	size		15
 	thrown		true
 	is_misc	true
-	weight		4.0
+	weight		4000
 }
 */

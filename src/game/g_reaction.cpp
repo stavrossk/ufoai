@@ -52,7 +52,7 @@
  */
 
 /*
-Copyright (C) 2002-2014 UFO: Alien Invasion.
+Copyright (C) 2002-2015 UFO: Alien Invasion.
 
 This program is free software; you can redistribute it and/or
 modify it under the terms of the GNU General Public License
@@ -207,7 +207,7 @@ void ReactionFireTargets::notifyClientMove (const Edict* target, int step, bool 
 			if (rfts->targets[j].target != target)
 				continue;
 			if (startMove) {
-				const int tus = target->TU - rfts->targets[j].triggerTUs;
+				const int tus = std::max(0, target->TU - rfts->targets[j].triggerTUs);
 				G_EventReactionFireAddTarget(*shooter, *target, tus, step);
 			} else {
 				G_EventReactionFireRemoveTarget(*shooter, *target, step);
@@ -251,7 +251,7 @@ ReactionFireTargetList* ReactionFireTargets::find (const Edict* shooter)
  */
 void ReactionFireTargets::create (const Edict* shooter)
 {
-	ReactionFireTargetList* rfts = find(shooter);
+	const ReactionFireTargetList* rfts = find(shooter);
 
 	if (rfts)
 		gi.Error("Entity already has rfData");
@@ -532,7 +532,8 @@ void G_ReactionFireSettingsUpdate (Actor* actor, fireDefIndex_t fmIdx, actorHand
 
 	if (!G_ActorHasWorkingFireModeSet(actor)) {
 		/* Disable reaction fire if no valid firemode was found. */
-		G_ClientStateChange(actor->getPlayer(), actor, ~STATE_REACTION, true);
+		G_ClientStateChange(actor->getPlayer(), actor, ~STATE_REACTION, false);
+		G_EventReactionFireChange(*actor);
 		return;
 	}
 
@@ -725,7 +726,7 @@ bool ReactionFire::canSee (const Actor* shooter, const Edict* target) const
 	if (!frustum)
 		return false;
 
-	const float actorVis = G_ActorVis(shooter->origin, shooter, target, true);
+	const float actorVis = G_ActorVis(shooter, target, true);
 	if (actorVis < 0.1)
 		return false;
 

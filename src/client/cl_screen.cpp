@@ -11,7 +11,7 @@
  */
 
 /*
-All original material Copyright (C) 2002-2014 UFO: Alien Invasion.
+All original material Copyright (C) 2002-2015 UFO: Alien Invasion.
 
 Original file from Quake 2 v3.21: quake2-2.31/client/
 Copyright (C) 1997-2001 Id Software, Inc.
@@ -81,12 +81,13 @@ static void SCR_DrawString (int x, int y, const char* string)
 static void SCR_DrawLoadingBar (int x, int y, int w, int h, int percent)
 {
 	const vec4_t color = {0.3f, 0.3f, 0.3f, 0.7f};
-	const vec4_t colorBar = {0.8f, 0.8f, 0.8f, 0.7f};
 
 	R_DrawFill(x, y, w, h, color);
 
-	if (percent != 0)
+	if (percent != 0) {
+		const vec4_t colorBar = {0.8f, 0.8f, 0.8f, 0.7f};
 		R_DrawFill((int)(x + (h * 0.2)), (int)(y + (h * 0.2)), (int)((w - (h * 0.4)) * percent * 0.01), (int)(h * 0.6), colorBar);
+	}
 }
 
 /**

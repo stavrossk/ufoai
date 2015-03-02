@@ -4,7 +4,7 @@
  */
 
 /*
-Copyright (C) 2002-2014 UFO: Alien Invasion.
+Copyright (C) 2002-2015 UFO: Alien Invasion.
 
 This program is free software; you can redistribute it and/or
 modify it under the terms of the GNU General Public License
@@ -200,7 +200,8 @@ void CP_CleanupTeam (base_t* base, equipDef_t* ed)
 			/* Check if there is a weapon and add it if there isn't. */
 			Item* rightH = chr->inv.getRightHandContainer();
 			if (!rightH || !rightH->def())
-				cgi->INV_EquipActorRobot(&chr->inv, INVSH_GetItemByID(employee->getUGV()->weapon));
+				cgi->INV_EquipActor(chr, nullptr, INVSH_GetItemByID(employee->getUGV()->weapon),
+						cgi->GAME_GetChrMaxLoad(chr));
 		}
 	}
 
@@ -249,7 +250,8 @@ void CP_CleanupAircraftTeam (aircraft_t* aircraft, equipDef_t* ed)
 				/* Check if there is a weapon and add it if there isn't. */
 				Item* rightH = chr->inv.getRightHandContainer();
 				if (!rightH || !rightH->def())
-					cgi->INV_EquipActorRobot(&chr->inv, INVSH_GetItemByID(employee->getUGV()->weapon));
+					cgi->INV_EquipActor(chr, nullptr, INVSH_GetItemByID(employee->getUGV()->weapon),
+							cgi->GAME_GetChrMaxLoad(chr));
 				continue;
 			}
 

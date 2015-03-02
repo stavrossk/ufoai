@@ -6,7 +6,7 @@
  */
 
 /*
-Copyright (C) 2002-2014 UFO: Alien Invasion.
+Copyright (C) 2002-2015 UFO: Alien Invasion.
 
 This program is free software; you can redistribute it and/or
 modify it under the terms of the GNU General Public License
@@ -531,7 +531,7 @@ void AIRFIGHT_ActionsAfterAirfight (const campaign_t* campaign, aircraft_t* shoo
 		if (shooter)
 			CP_UFOProceedMission(campaign, shooter);
 
-		MS_AddNewMessage(_("Interception"), _("You've lost the battle"), MSG_DEATH);
+		MS_AddNewMessage(_("Interception"), _("A PHALANX craft has been destroyed"), MSG_DEATH);
 	}
 }
 

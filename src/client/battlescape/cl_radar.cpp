@@ -4,7 +4,7 @@
  */
 
 /*
-Copyright (C) 2002-2014 UFO: Alien Invasion.
+Copyright (C) 2002-2015 UFO: Alien Invasion.
 
 This program is free software; you can redistribute it and/or
 modify it under the terms of the GNU General Public License
@@ -110,8 +110,8 @@ static void CL_BattlescapeRadarGenerate_f (void)
 
 static void CL_BattlescapeRadarGenerateAll (uiNode_t* node, uiTimer_t* timer)
 {
-	int level = (timer->calledTime - 1) / 2;
-	int mode = (timer->calledTime - 1) % 2;
+	const int level = (timer->calledTime - 1) / 2;
+	const int mode = (timer->calledTime - 1) % 2;
 
 	if (level >= cl.mapMaxLevel) {
 		Cbuf_AddText("ui_genallradarmaprelease");

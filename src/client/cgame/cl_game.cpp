@@ -4,7 +4,7 @@
  */
 
 /*
-Copyright (C) 2002-2014 UFO: Alien Invasion.
+Copyright (C) 2002-2015 UFO: Alien Invasion.
 
 This program is free software; you can redistribute it and/or
 modify it under the terms of the GNU General Public License
@@ -250,16 +250,23 @@ void GAME_ResetCharacters (void)
 
 void GAME_AppendTeamMember (int memberIndex, const char* teamDefID, const equipDef_t* ed)
 {
-	character_t* chr;
-
 	if (ed == nullptr)
 		Com_Error(ERR_DROP, "No equipment definition given");
 
-	chr = GAME_GetCharacter(memberIndex);
+	character_t* chr = GAME_GetCharacter(memberIndex);
 
 	CL_GenerateCharacter(chr, teamDefID);
+
+	const objDef_t* weapon = chr->teamDef->onlyWeapon;
+	if (chr->teamDef->robot && !weapon) {
+		/* This is likely an UGV, try to guess which one and get the weapon */
+		const char* ugvId = strstr(chr->teamDef->id, "ugv");
+		const ugv_t* ugv = Com_GetUGVByIDSilent(ugvId);
+		if (ugv)
+			weapon = INVSH_GetItemByID(ugv->weapon);
+	}
 	/* pack equipment */
-	cls.i.EquipActor(chr, ed, GAME_GetChrMaxLoad(chr));
+	cls.i.EquipActor(chr, ed, weapon, GAME_GetChrMaxLoad(chr));
 
 	LIST_AddPointer(&chrDisplayList, (void*)chr);
 
@@ -448,19 +455,9 @@ static void GAME_DestroyInventory (Inventory* const inv)
 	cls.i.destroyInventory(inv);
 }
 
-static void GAME_EquipActor (character_t* const chr, const equipDef_t* ed, int maxWeight)
+static void GAME_EquipActor (character_t* const chr, const equipDef_t* ed, const objDef_t* weapon, int maxWeight)
 {
-	cls.i.EquipActor(chr, ed, maxWeight);
-}
-
-static void GAME_EquipActorMelee (Inventory* const inv, const teamDef_t* td)
-{
-	cls.i.EquipActorMelee(inv, td);
-}
-
-static void GAME_EquipActorRobot (Inventory* const inv, const objDef_t* weapon)
-{
-	cls.i.EquipActorRobot(inv, weapon);
+	cls.i.EquipActor(chr, ed, weapon, maxWeight);
 }
 
 static bool GAME_RemoveFromInventory (Inventory* const i, const invDef_t* container, Item* fItem)
@@ -813,8 +810,6 @@ static const cgame_import_t* GAME_GetImportData (const cgameType_t* t)
 		cgi->INV_GetEquipmentDefinitionByID = INV_GetEquipmentDefinitionByID;
 		cgi->INV_DestroyInventory = GAME_DestroyInventory;
 		cgi->INV_EquipActor = GAME_EquipActor;
-		cgi->INV_EquipActorMelee = GAME_EquipActorMelee;
-		cgi->INV_EquipActorRobot = GAME_EquipActorRobot;
 		cgi->INV_RemoveFromInventory = GAME_RemoveFromInventory;
 
 		cgi->INV_ItemDescription = INV_ItemDescription;
@@ -961,6 +956,7 @@ void GAME_SetMode (const cgame_export_t* gametype)
 
 	GAME_ResetCharacters();
 	LIST_Delete(&cl.chrList);
+	Cvar_FullSet("gamemode", "", CVAR_NOSET);
 
 	list = GAME_GetCurrentType();
 	if (list) {
@@ -985,6 +981,7 @@ void GAME_SetMode (const cgame_export_t* gametype)
 		cls.i.destroyInventoryInterface();
 		cls.i.initInventory(list->name, &csi, &inventoryImport);
 		list->Init();
+		Cvar_FullSet("gamemode", list->menu, CVAR_NOSET);
 	}
 }
 
@@ -1019,8 +1016,6 @@ static void UI_MapInfoGetNext (int step)
  */
 static void UI_MapInfo (int step)
 {
-	const char* mapname;
-	const mapDef_t* md;
 	const cgame_export_t* list = GAME_GetCurrentType();
 
 	if (!list)
@@ -1031,11 +1026,11 @@ static void UI_MapInfo (int step)
 
 	UI_MapInfoGetNext(step);
 
-	md = list->MapInfo(step);
+	const mapDef_t* md = list->MapInfo(step);
 	if (!md)
 		return;
 
-	mapname = md->mapTheme;
+	const char* mapname = md->mapTheme;
 	/* skip random map char. */
 	Cvar_Set("mn_svmapid", "%s", md->id);
 	if (mapname[0] == '+') {
@@ -1063,10 +1058,6 @@ static void UI_MapInfo (int step)
 
 static void UI_RequestMapList_f (void)
 {
-	const char* callbackCmd;
-	const mapDef_t* md;
-	const bool multiplayer = GAME_IsMultiplayer();
-
 	if (Cmd_Argc() != 2) {
 		Com_Printf("Usage: %s <callback>\n", Cmd_Argv(0));
 		return;
@@ -1075,10 +1066,12 @@ static void UI_RequestMapList_f (void)
 	if (!csi.numMDs)
 		return;
 
-	callbackCmd = Cmd_Argv(1);
+	const char* callbackCmd = Cmd_Argv(1);
 
 	Cbuf_AddText("%s begin\n", callbackCmd);
 
+	const mapDef_t* md;
+	const bool multiplayer = GAME_IsMultiplayer();
 	MapDef_ForeachCondition(md, multiplayer ? md->multiplayer : md->singleplayer) {
 		const char* preview;
 
@@ -1126,10 +1119,6 @@ static void UI_PreviousMap_f (void)
 
 static void UI_SelectMap_f (void)
 {
-	const char* mapname;
-	const mapDef_t* md;
-	int i;
-
 	if (Cmd_Argc() != 2) {
 		Com_Printf("Usage: %s <mapname>\n", Cmd_Argv(0));
 		return;
@@ -1138,8 +1127,9 @@ static void UI_SelectMap_f (void)
 	if (!csi.numMDs)
 		return;
 
-	mapname = Cmd_Argv(1);
-	i = 0;
+	const char* mapname = Cmd_Argv(1);
+	int i = 0;
+	const mapDef_t* md;
 
 	MapDef_Foreach(md) {
 		i++;
@@ -1215,7 +1205,7 @@ static bool GAME_LoadGame (const char* path, const char* name)
 		return true;
 	} else {
 		Com_Printf("not found at '%s'\n", path);
-		Com_Printf("%s\n", SDL_GetError());
+		Com_DPrintf(DEBUG_SYSTEM, "%s\n", SDL_GetError());
 		return false;
 	}
 }
@@ -1225,9 +1215,6 @@ static const cgame_export_t* GAME_GetCGameAPI (const cgameType_t* t)
 {
 	const char* name = t->id;
 #ifndef HARD_LINKED_CGAME
-	cgame_api_t GetCGameAPI;
-	const char* path;
-
 	if (cls.cgameLibrary)
 		Com_Error(ERR_FATAL, "GAME_GetCGameAPI without GAME_UnloadGame");
 
@@ -1238,7 +1225,7 @@ static const cgame_export_t* GAME_GetCGameAPI (const cgameType_t* t)
 #endif
 
 	/* now run through the search paths */
-	path = nullptr;
+	const char* path = nullptr;
 	while (!cls.cgameLibrary) {
 		path = FS_NextPath(path);
 		if (!path)
@@ -1248,7 +1235,7 @@ static const cgame_export_t* GAME_GetCGameAPI (const cgameType_t* t)
 			break;
 	}
 
-	GetCGameAPI = (cgame_api_t)(uintptr_t)SDL_LoadFunction(cls.cgameLibrary, "GetCGameAPI");
+	cgame_api_t GetCGameAPI = (cgame_api_t)(uintptr_t)SDL_LoadFunction(cls.cgameLibrary, "GetCGameAPI");
 	if (!GetCGameAPI) {
 		GAME_UnloadGame();
 		return nullptr;
@@ -1368,8 +1355,7 @@ static void GAME_NetSendInventory (dbuffer* buf, const Inventory* inv)
 
 	NET_WriteShort(buf, nr);
 
-	containerIndex_t container;
-	for (container = 0; container < CID_MAX; container++) {
+	for (containerIndex_t container = 0; container < CID_MAX; container++) {
 		if (INVDEF(container)->temp)
 			continue;
 		const Item* ic;
@@ -1386,8 +1372,6 @@ static void GAME_NetSendInventory (dbuffer* buf, const Inventory* inv)
  */
 static void GAME_NetSendCharacter (dbuffer* buf, const character_t* chr)
 {
-	int j;
-
 	if (!chr)
 		Com_Error(ERR_DROP, "No character given");
 	if (chr->fieldSize != ACTOR_SIZE_2x2 && chr->fieldSize != ACTOR_SIZE_NORMAL)
@@ -1414,16 +1398,16 @@ static void GAME_NetSendCharacter (dbuffer* buf, const character_t* chr)
 	NET_WriteByte(buf, chr->STUN);
 	NET_WriteByte(buf, chr->morale);
 
-	for (j = 0; j < chr->teamDef->bodyTemplate->numBodyParts(); ++j)
+	for (int j = 0; j < chr->teamDef->bodyTemplate->numBodyParts(); ++j)
 		NET_WriteByte(buf, chr->wounds.treatmentLevel[j]);
 
-	for (j = 0; j < SKILL_NUM_TYPES + 1; j++)
+	for (int j = 0; j < SKILL_NUM_TYPES + 1; j++)
 		NET_WriteLong(buf, chr->score.experience[j]);
-	for (j = 0; j < SKILL_NUM_TYPES; j++)
+	for (int j = 0; j < SKILL_NUM_TYPES; j++)
 		NET_WriteByte(buf, chr->score.skills[j]);
-	for (j = 0; j < KILLED_NUM_TYPES; j++)
+	for (int j = 0; j < KILLED_NUM_TYPES; j++)
 		NET_WriteShort(buf, chr->score.kills[j]);
-	for (j = 0; j < KILLED_NUM_TYPES; j++)
+	for (int j = 0; j < KILLED_NUM_TYPES; j++)
 		NET_WriteShort(buf, chr->score.stuns[j]);
 	NET_WriteShort(buf, chr->score.assignedMissions);
 }
@@ -1455,13 +1439,12 @@ static void GAME_SendCurrentTeamSpawningInfo (dbuffer* buf, linkedList_t* team)
 
 const char* GAME_GetTeamDef (void)
 {
-	const char* teamDefID;
 	const cgame_export_t* list = GAME_GetCurrentType();
 
 	if (list && list->GetTeamDef)
 		return list->GetTeamDef();
 
-	teamDefID = Cvar_GetString("cl_teamdef");
+	const char* teamDefID = Cvar_GetString("cl_teamdef");
 	if (teamDefID[0] == '\0')
 		teamDefID = "phalanx";
 	return teamDefID;
@@ -1509,7 +1492,7 @@ void GAME_StartBattlescape (bool isTeamPlay)
 	if (list != nullptr && list->StartBattlescape) {
 		list->StartBattlescape(isTeamPlay);
 	} else {
-		HUD_InitUI("singleplayermission");
+		HUD_InitUI("missionoptions");
 		GAME_InitMissionBriefing(_(CL_GetConfigString(CS_MAPTITLE)));
 	}
 }
@@ -1556,12 +1539,26 @@ static void GAME_InitializeBattlescape (linkedList_t* team)
 		UI_ExecuteConfunc("huddisable %i", i);
 	}
 
+	dbuffer msg;
 	const cgame_export_t* list = GAME_GetCurrentType();
 	if (list && list->InitializeBattlescape) {
-		dbuffer msg;
 		list->InitializeBattlescape(&msg, team);
-		NET_WriteMsg(cls.netStream, msg);
+	} else {
+		const int teamSize = LIST_Count(team);
+		dbuffer* m = &msg;
+
+		NET_WriteByte(m, clc_initactorstates);
+		NET_WriteByte(m, teamSize);
+
+		LIST_Foreach(team, character_t, chr) {
+			NET_WriteShort(m, chr->ucn);
+			NET_WriteShort(m, STATE_REACTION);
+			NET_WriteShort(m, ACTOR_HAND_NOT_SET);
+			NET_WriteShort(m, NONE);
+			NET_WriteShort(m, NONE);
+		}
 	}
+	NET_WriteMsg(cls.netStream, msg);
 }
 
 /**
@@ -1687,13 +1684,11 @@ static void GAME_Exit_f (void)
  */
 void GAME_Frame (void)
 {
-	const cgame_export_t* list;
-
 	/* don't run the cgame in console mode */
 	if (cls.keyDest == key_console)
 		return;
 
-	list = GAME_GetCurrentType();
+	const cgame_export_t* list = GAME_GetCurrentType();
 	if (list && list->RunFrame != nullptr)
 		list->RunFrame(cls.frametime);
 }
@@ -1795,11 +1790,10 @@ const equipDef_t* GAME_ChangeEquip (const linkedList_t* equipmentList, changeEqu
 	const equipDef_t* ed;
 
 	if (LIST_IsEmpty(equipmentList)) {
-		int index;
 		ed = INV_GetEquipmentDefinitionByID(equipID);
 		if (ed == nullptr)
 			Com_Error(ERR_DROP, "Could not find the equipment definition for '%s'", equipID);
-		index = ed - csi.eds;
+		int index = ed - csi.eds;
 
 		switch (changeType) {
 		case BACKWARD:
@@ -1871,7 +1865,7 @@ void GAME_InitUIData (void)
 void GAME_InitStartup (void)
 {
 	Cmd_AddCommand("game_setmode", GAME_SetMode_f, "Decides with game mode should be set - takes the menu as reference");
-	Cmd_AddCommand("game_exit", GAME_Exit_f, "Abort the game and let the aliens/opponents win");
+	Cmd_AddCommand("game_exit", GAME_Exit_f, "Quits the current running game and shutdown the game mode");
 	Cmd_AddCommand("game_abort", GAME_Abort_f, "Abort the game and let the aliens/opponents win");
 	Cmd_AddCommand("game_autoteam", GAME_AutoTeam_f, "Assign initial equipment to soldiers");
 	Cmd_AddCommand("game_toggleactor", GAME_ToggleActorForTeam_f);

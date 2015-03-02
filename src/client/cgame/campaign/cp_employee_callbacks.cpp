@@ -4,7 +4,7 @@
  */
 
 /*
-All original material Copyright (C) 2002-2014 UFO: Alien Invasion.
+All original material Copyright (C) 2002-2015 UFO: Alien Invasion.
 
 This program is free software; you can redistribute it and/or
 modify it under the terms of the GNU General Public License
@@ -23,21 +23,16 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 */
 #include "../../cl_shared.h"
-#include "../../cl_team.h" /* CL_UpdateCharacterValues */
 #include "../../ui/ui_dataids.h"
 #include "cp_campaign.h"
+#include "cp_hospital.h" /* HOS_NeedsHealing */
 #include "cp_employee_callbacks.h"
 #include "cp_employee.h"
-
 
 /** Currently selected employee. */
 static Employee* selectedEmployee = nullptr;
 /* Holds the current active employee category */
 static int employeeCategory = 0;
-
-static const int maxEmployeesPerPage = 14;
-
-static int employeeScrollPos = 0;
 
 /* List of (hired) emplyoees in the current category (employeeType). */
 static linkedList_t* employeeList;	/** @sa E_GetEmployeeByMenuIndex */
@@ -49,13 +44,12 @@ static int employeesInCurrentList;
  */
 static void E_UpdateGUICount_f (void)
 {
-	int max;
-	base_t* base = B_GetCurrentSelectedBase();
+	const base_t* base = B_GetCurrentSelectedBase();
 
 	if (!base)
 		return;
 
-	max = CAP_GetMax(base, CAP_EMPLOYEES);
+	const int max = CAP_GetMax(base, CAP_EMPLOYEES);
 	cgi->Cvar_SetValue("mn_hiresoldiers", E_CountHired(base, EMPL_SOLDIER));
 	cgi->Cvar_SetValue("mn_hireworkers", E_CountHired(base, EMPL_WORKER));
 	cgi->Cvar_SetValue("mn_hirescientists", E_CountHired(base, EMPL_SCIENTIST));
@@ -82,62 +76,6 @@ static void E_EmployeeSelect (Employee* employee)
 }
 
 /**
- * @brief Click function for employee_list node
- * @sa E_EmployeeList_f
- */
-static void E_EmployeeListScroll_f (void)
-{
-	int j, cnt = 0;
-	base_t* base = B_GetCurrentSelectedBase();
-
-	if (!base)
-		return;
-
-	if (cgi->Cmd_Argc() < 2)
-		return;
-
-	employeeScrollPos = atoi(cgi->Cmd_Argv(1));
-	j = employeeScrollPos;
-
-	E_Foreach(employeeCategory, employee) {
-		/* don't show employees of other bases */
-		if (employee->isHired() && !employee->isHiredInBase(base))
-			continue;
-		/* don't show employees being transferred to other bases */
-		if (employee->transfer)
-			continue;
-
-		/* drop the first j entries */
-		if (j) {
-			j--;
-			continue;
-		}
-		/* change the buttons */
-		if (employee->isHired()) {
-			if (employee->isAwayFromBase())
-				cgi->UI_ExecuteConfunc("employeedisable %i", cnt);
-			else
-				cgi->UI_ExecuteConfunc("employeefire %i", cnt);
-		} else {
-			cgi->UI_ExecuteConfunc("employeehire %i", cnt);
-		}
-
-		cnt++;
-
-		/* only 19 buttons */
-		if (cnt >= maxEmployeesPerPage)
-			break;
-	}
-
-	for (;cnt < maxEmployeesPerPage; cnt++) {
-		cgi->Cvar_Set(va("mn_name%i", cnt), "");
-		cgi->UI_ExecuteConfunc("employeehide %i", cnt);
-	}
-
-	cgi->UI_ExecuteConfunc("hire_fix_scroll %i", employeeScrollPos);
-}
-
-/**
  * @brief Find an hired or free employee by the menu index
  * @param[in] num The index from the hire menu screen (index inemployeeList).
  */
@@ -152,10 +90,7 @@ static Employee* E_GetEmployeeByMenuIndex (int num)
  */
 static void E_EmployeeList_f (void)
 {
-	Employee* employee;
-	int hiredEmployeeIdx;
-	linkedList_t* employeeListName;
-	base_t* base = B_GetCurrentSelectedBase();
+	const base_t* base = B_GetCurrentSelectedBase();
 
 	if (!base)
 		return;
@@ -169,18 +104,16 @@ static void E_EmployeeList_f (void)
 	if (employeeCategory >= MAX_EMPL || employeeCategory < 0)
 		employeeCategory = EMPL_SOLDIER;
 
+	int hiredEmployeeIdx;
 	if (cgi->Cmd_Argc() == 3)
 		hiredEmployeeIdx = atoi(cgi->Cmd_Argv(2));
 	else
 		hiredEmployeeIdx = -1;
 
-	/* reset the employee count */
+	/* reset the employee list */
 	employeesInCurrentList = 0;
-
 	cgi->LIST_Delete(&employeeList);
-	/* make sure, that we are using the linked list */
-	cgi->UI_ResetData(TEXT_LIST);
-	employeeListName = nullptr;
+	cgi->UI_ExecuteConfunc("hire_clear");
 
 	E_Foreach(employeeCategory, e) {
 		/* don't show employees of other bases */
@@ -189,17 +122,28 @@ static void E_EmployeeList_f (void)
 		/* don't show employees being transferred to other bases */
 		if (e->transfer)
 			continue;
-		cgi->LIST_AddPointer(&employeeListName, e->chr.name);
 		cgi->LIST_AddPointer(&employeeList, e);
+		const int needsHealing = HOS_NeedsHealing(e->chr) ? 1 : 0;
+		const aircraft_t* craft = AIR_IsEmployeeInAircraft(e, nullptr);
+		cgi->UI_ExecuteConfunc("hire_addemployee %i \"%s\" %i \"%s\"",
+				employeesInCurrentList, e->chr.name, needsHealing, craft ? craft->name : "");
+		if (e->isHired()) {
+			if (e->isAwayFromBase())
+				cgi->UI_ExecuteConfunc("employeedisable %i", employeesInCurrentList);
+			else
+				cgi->UI_ExecuteConfunc("employeefire %i", employeesInCurrentList);
+		} else {
+			cgi->UI_ExecuteConfunc("employeehire %i", employeesInCurrentList);
+		}
 		employeesInCurrentList++;
 	}
-	cgi->UI_RegisterLinkedListText(TEXT_LIST, employeeListName);
 
 	/* If the list is empty OR we are in pilots/scientists/workers-mode: don't show the model&stats. */
 	/** @note
 	 * 0 == nothing is displayed
-	 * 1 == all is displayed
-	 * 2 == only stuff wanted for scientists/workers/pilots are displayed
+	 * 1 == only stuff wanted for soldiers is displayed
+	 * 2 == only stuff wanted for pilots is displayed
+	 * 3 == only stuff wanted for scientists/workers is displayed
 	 */
 	/** @todo replace magic numbers - use confuncs */
 	if (employeesInCurrentList == 0) {
@@ -214,18 +158,14 @@ static void E_EmployeeList_f (void)
 	}
 	/* Select the current employee if name was changed or first one. Use the direct string
 	 * execution here - otherwise the employeeCategory might be out of sync */
+	Employee* employee = nullptr;
 	if (hiredEmployeeIdx < 0 || selectedEmployee == nullptr)
 		employee = E_GetEmployeeByMenuIndex(0);
 	else
 		employee = selectedEmployee;
 
 	E_EmployeeSelect(employee);
-
-	/* update scroll */
-	cgi->UI_ExecuteConfunc("hire_update_number %i", employeesInCurrentList);
-	cgi->UI_ExecuteConfunc("employee_scroll 0");
 }
-
 
 /**
  * @brief Change the name of the selected actor.
@@ -247,17 +187,6 @@ static void E_ChangeName_f (void)
 }
 
 /**
- * @brief Fill employeeList with a list of employees in the current base (i.e. they are hired and not transferred)
- * @sa E_GetEmployeeByMenuIndex - It is used to get a specific entry from the generated employeeList.
- */
-int E_GenerateHiredEmployeesList (const base_t* base)
-{
-	assert(base);
-	employeesInCurrentList = E_GetHiredEmployees(base, EMPL_SOLDIER, &employeeList);
-	return employeesInCurrentList;
-}
-
-/**
  * @brief This removes an employee from the global list so that
  * he/she is no longer hireable.
  */
@@ -270,7 +199,7 @@ static void E_EmployeeDelete_f (void)
 	}
 
 	/* num - menu index (line in text) */
-	int num = employeeScrollPos + atoi(cgi->Cmd_Argv(1));
+	int num = atoi(cgi->Cmd_Argv(1));
 
 	Employee* employee = E_GetEmployeeByMenuIndex(num);
 	/* empty slot selected */
@@ -314,20 +243,10 @@ static void E_EmployeeHire_f (void)
 
 	const char* arg = cgi->Cmd_Argv(1);
 
-	/* check whether this is called with the text node click function
-	 * with values from 0 - #available employees (bigger values than
-	 * maxEmployeesPerPage) possible ... *
-	 * num - menu index (line in text), button - number of button */
-	int num, button;
-	if (arg[0] == '+') {
-		num = atoi(arg + 1);
-		button = num - employeeScrollPos;
-	/* ... or with the hire pictures that are using only values from
-	 * 0 - maxEmployeesPerPage */
-	} else {
-		button = atoi(cgi->Cmd_Argv(1));
-		num = button + employeeScrollPos;
-	}
+	if (arg[0] == '+')
+		++arg;
+
+	const int num = atoi(arg);
 
 	Employee* employee = E_GetEmployeeByMenuIndex(num);
 	/* empty slot selected */
@@ -339,15 +258,15 @@ static void E_EmployeeHire_f (void)
 			Com_DPrintf(DEBUG_CLIENT, "Couldn't fire employee\n");
 			cgi->UI_DisplayNotice(_("Could not fire employee"), 2000, "employees");
 		} else {
-			cgi->UI_ExecuteConfunc("employeehire %i", button);
+			cgi->UI_ExecuteConfunc("employeehire %i", num);
 		}
 	} else {
 		if (!E_HireEmployee(base, employee)) {
 			Com_DPrintf(DEBUG_CLIENT, "Couldn't hire employee\n");
 			cgi->UI_DisplayNotice(_("Could not hire employee"), 2000, "employees");
-			cgi->UI_ExecuteConfunc("employeehire %i", button);
+			cgi->UI_ExecuteConfunc("employeehire %i", num);
 		} else {
-			cgi->UI_ExecuteConfunc("employeefire %i", button);
+			cgi->UI_ExecuteConfunc("employeefire %i", num);
 		}
 	}
 	E_EmployeeSelect(employee);
@@ -377,11 +296,10 @@ static void E_EmployeeSelect_f (void)
 static const cmdList_t employeeCmds[] = {
 	{"employee_update_count", E_UpdateGUICount_f, "Callback to update the employee count of the current GUI"},
 	{"employee_init", E_EmployeeList_f, "Init function for employee hire menu"},
-	{"employee_delete", E_EmployeeDelete_f, "Removed an employee from the global employee list"},
+	{"employee_delete", E_EmployeeDelete_f, "Remove an employee from the global employee list"},
 	{"employee_hire", E_EmployeeHire_f, nullptr},
 	{"employee_select", E_EmployeeSelect_f, nullptr},
 	{"employee_changename", E_ChangeName_f, "Change the name of an employee"},
-	{"employee_scroll", E_EmployeeListScroll_f, "Scroll callback for employee list"},
 	{nullptr, nullptr, nullptr}
 };
 

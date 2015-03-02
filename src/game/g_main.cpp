@@ -4,7 +4,7 @@
  */
 
 /*
-All original material Copyright (C) 2002-2014 UFO: Alien Invasion.
+All original material Copyright (C) 2002-2015 UFO: Alien Invasion.
 
 Original file from Quake 2 v3.21: quake2-2.31/game/g_main.c
 Copyright (C) 1997-2001 Id Software, Inc.
@@ -76,6 +76,7 @@ cvar_t* ai_multiplayeraliens;
 /* morale cvars */
 cvar_t* mob_death;
 cvar_t* mob_wound;
+cvar_t* mob_shoot;
 cvar_t* mof_watching;
 cvar_t* mof_teamkill;
 cvar_t* mof_civilian;
@@ -201,6 +202,7 @@ static void G_Init (void)
 
 	mob_death = gi.Cvar_Get("mob_death", "10", CVAR_LATCH|CVAR_NOSET, nullptr);
 	mob_wound = gi.Cvar_Get("mob_wound", "0.1", CVAR_LATCH|CVAR_NOSET, nullptr);
+	mob_shoot = gi.Cvar_Get("mob_shoot", "0.1", CVAR_LATCH|CVAR_NOSET, nullptr);
 	mof_watching = gi.Cvar_Get("mof_watching", "1.7", CVAR_LATCH|CVAR_NOSET, nullptr);
 	mof_teamkill = gi.Cvar_Get("mof_teamkill", "2.0", CVAR_LATCH|CVAR_NOSET, nullptr);
 	mof_civilian = gi.Cvar_Get("mof_civilian", "0.3", CVAR_LATCH|CVAR_NOSET, nullptr);

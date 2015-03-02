@@ -5,7 +5,7 @@
  */
 
 /*
-Copyright (C) 2002-2014 UFO: Alien Invasion.
+Copyright (C) 2002-2015 UFO: Alien Invasion.
 
 This program is free software; you can redistribute it and/or
 modify it under the terms of the GNU General Public License
@@ -140,19 +140,22 @@ bool E_MoveIntoNewBase (Employee* employee, base_t* newBase)
 {
 	if (employee) {
 		base_t* oldBase = employee->baseHired;
-		assert(oldBase);
 		employee->baseHired = newBase;
 		/* Remove employee from corresponding capacity */
 		switch (employee->getType()) {
-		case EMPL_PILOT:
 		case EMPL_WORKER:
+			if (oldBase != nullptr)
+				PR_UpdateProductionCap(oldBase, 0);
+		case EMPL_PILOT:
 		case EMPL_SCIENTIST:
 		case EMPL_SOLDIER:
-			CAP_AddCurrent(oldBase, CAP_EMPLOYEES, -1);
+			if (oldBase != nullptr)
+				CAP_AddCurrent(oldBase, CAP_EMPLOYEES, -1);
 			CAP_AddCurrent(newBase, CAP_EMPLOYEES, 1);
 			break;
 		case EMPL_ROBOT:
-			CAP_AddCurrent(oldBase, CAP_ITEMS, -UGV_SIZE);
+			if (oldBase != nullptr)
+				CAP_AddCurrent(oldBase, CAP_ITEMS, -UGV_SIZE);
 			CAP_AddCurrent(newBase, CAP_ITEMS, UGV_SIZE);
 			break;
 		case MAX_EMPL:
@@ -338,6 +341,8 @@ Employee* E_GetUnassignedEmployee (const base_t* const base, const employeeType_
 {
 	E_Foreach(type, employee) {
 		if (!employee->isHiredInBase(base))
+			continue;
+		if (employee->transfer)
 			continue;
 		if (!employee->isAssigned())
 			return employee;
@@ -951,7 +956,9 @@ bool E_LoadXML (xmlNode_t* p)
 {
 	xmlNode_t* snode;
 	bool success = true;
+	linkedList_t* lastEmployee[MAX_EMPL];
 
+	OBJZERO(lastEmployee);
 	cgi->Com_RegisterConstList(saveEmployeeConstants);
 	for (snode = cgi->XML_GetNode(p, SAVE_EMPLOYEE_EMPLOYEES); snode;
 			snode = cgi->XML_GetNextNode(snode, p, SAVE_EMPLOYEE_EMPLOYEES)) {
@@ -999,7 +1006,15 @@ bool E_LoadXML (xmlNode_t* p)
 				success = false;
 				break;
 			}
-			LIST_Add(&ccs.employees[emplType], e);
+			if (lastEmployee[emplType] == nullptr)
+				lastEmployee[emplType] = LIST_Add(&ccs.employees[emplType], (void*) &e, sizeof(e));
+			else
+				lastEmployee[emplType] = LIST_Add(&lastEmployee[emplType], (void*) &e, sizeof(e));
+			if (lastEmployee[emplType] == nullptr) {
+				Com_Printf("Could not add employee to the game\n");
+				success = false;
+				break;
+			}
 		}
 		if (!success)
 			break;

@@ -4,7 +4,7 @@
  */
 
 /*
-Copyright (C) 2002-2014 UFO: Alien Invasion.
+Copyright (C) 2002-2015 UFO: Alien Invasion.
 
 This program is free software; you can redistribute it and/or
 modify it under the terms of the GNU General Public License
@@ -40,6 +40,35 @@ void character_s::init ()
 	teamDef = nullptr;
 	inv.init();
 	memset(implants, 0, sizeof(implants));
+}
+
+/**
+ * @brief Returns the actor sounds for a given category
+ * @param[in] gender The gender of the actor
+ * @param[in] soundType Which sound category (actorSound_t)
+ */
+const char* teamDef_s::getActorSound (int gender, actorSound_t soundType) const
+{
+	if (gender < 0 || gender >= NAME_LAST) {
+		Com_DPrintf(DEBUG_SOUND|DEBUG_CLIENT, "getActorSound: invalid gender: %i\n", gender);
+		return nullptr;
+	}
+	if (numSounds[soundType][gender] <= 0) {
+		Com_DPrintf(DEBUG_SOUND|DEBUG_CLIENT, "getActorSound: no sound defined for sound type: %i, teamID: '%s', gender: %i\n", soundType, id, gender);
+		return nullptr;
+	}
+
+	// Can't use LIST_GetRandom() or LIST_GetByIdx() in the game module
+	const int random = rand() % numSounds[soundType][gender];
+	const linkedList_t* list = sounds[soundType][gender];
+	for (int j = 0; j < random; j++) {
+		assert(list);
+		list = list->next;
+	}
+
+	assert(list);
+	assert(list->data);
+	return (const char*)list->data;
 }
 
 /**
